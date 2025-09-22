@@ -1,0 +1,9 @@
+[2025-08-08T03:50:52.467Z] getTimeOutsideEval - submissionId: 17
+[2025-08-08T03:50:52.622Z] getTimeOutsideEval - submission encontrada: {"id":17,"timeOutsideEval":6,"firstName":"jhon","lastName":"Valencia Gómez"}
+[2025-08-08T03:50:52.625Z] getTimeOutsideEval - resultado: {"success":true,"timeOutsideEval":6}
+[2025-08-08T03:51:33.411Z] updateTimeOutsideEval - submissionId: 17, timeOutsideEval: 5
+[2025-08-08T03:51:33.574Z] updateTimeOutsideEval - submission antes de actualizar: {"id":17,"timeOutsideEval":6,"firstName":"jhon","lastName":"Valencia Gómez"}
+[2025-08-08T03:51:33.728Z] updateTimeOutsideEval - resultado de la actualización: {"id":17,"timeOutsideEval":5,"firstName":"jhon","lastName":"Valencia Gómez"}
+[2025-08-08T03:51:33.754Z] updateTimeOutsideEval - submissionId: 17, timeOutsideEval: 5
+[2025-08-08T03:51:33.833Z] updateTimeOutsideEval - submission antes de actualizar: {"id":17,"timeOutsideEval":5,"firstName":"jhon","lastName":"Valencia Gómez"}
+[2025-08-08T03:51:33.912Z] updateTimeOutsideEval - resultado de la actualización: {"id":17,"timeOutsideEval":5,"firstName":"jhon","lastName":"Valencia Gómez"}
