@@ -78,16 +78,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
     }
   }, [currentTheme, isEditorReady]);
 
-  // Función para formatear el código
-  const formatCode = useCallback(() => {
-    if (editorRef.current && isEditorReady) {
-      try {
-        editorRef.current.getAction('editor.action.formatDocument')?.run();
-      } catch (error) {
-        console.error('[CodeEditor] Error al formatear código:', error);
-      }
-    }
-  }, [isEditorReady]);
+
 
   if (editorError) {
     return (
@@ -309,16 +300,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
           }}
         />
         
-        {/* Texto de formato en la esquina inferior derecha */}
-        {isEditorReady && (
-          <div 
-            className="absolute bottom-2 right-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none transition-colors duration-200 bg-background/80 backdrop-blur-sm px-2 py-1 rounded border border-border/50 hover:border-border"
-            onClick={formatCode}
-            title="Formatear código"
-          >
-            Formatear
-          </div>
-        )}
+
       </div>
     </div>
   );

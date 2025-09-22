@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { getAIFeedback } from '@/lib/gemini-code-evaluation';
 import { evaluateTextResponse } from '@/lib/gemini-text-evaluation';
 import { useApiKeyRequired } from '@/components/ui/api-key-guard';
+import { removeApiKeyFromStorage } from '@/lib/apiKeyService';
 
 // Tipos para los modelos de datos
 type Question = {
@@ -394,6 +395,15 @@ function EvaluationContent() {
       
       if (result.success) {
         console.log('✅ Evaluación enviada exitosamente, redirigiendo...');
+        
+        // Limpiar la API key de Gemini del localStorage del estudiante
+        try {
+          removeApiKeyFromStorage();
+          console.log('🔑 API key de Gemini eliminada del localStorage');
+        } catch (error) {
+          console.error('❌ Error al eliminar API key:', error);
+        }
+        
         // Redirigir a la página de reporte con los datos por query params
         router.push(`/student/report?name=${encodeURIComponent(firstName + ' ' + lastName)}&grade=${result.submission?.score ?? ''}&date=${encodeURIComponent(new Date().toLocaleString())}`)
         return;
@@ -844,70 +854,80 @@ function EvaluationContent() {
 
           {/* Contenedor para botones con altura uniforme */}
           <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-            {/* Botón para alternar modo de vista eliminado - solo modo columnas */}
-
-            {/* Botón de alternancia Ayuda/Evaluación */}
-            {(evaluation?.helpUrl || currentQuestion.helpUrl) && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setIsHelpMode(!isHelpMode)}
-                className={cn(
-                  "h-7 px-2 text-xs font-medium shadow-md hover:shadow-lg transition-all duration-200",
-                  isHelpMode 
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white" 
-                    : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                )}
-                title={isHelpMode ? "Volver a la evaluación" : "Ver recursos de ayuda"}
-              >
-                {isHelpMode ? (
-                  <PenTool className="h-3 w-3" />
-                ) : (
-                  <HelpCircle className="h-3 w-3" />
-                )}
-                <span className="hidden sm:inline ml-1">
-                  {isHelpMode ? 'Evaluación' : 'Ayuda'}
-                </span>
-              </Button>
-            )}
+            {/* Grupo de botones de acción - lado izquierdo */}
+            <div className="flex items-center gap-2">
+              {/* Botón de enviar evaluación */}
+              {!isHelpMode && (
+                <Button
+                  size="sm"
+                  onClick={openSubmitDialog}
+                  disabled={loading}
+                  className="gap-1 h-7 flex-grow md:flex-grow-0"
+                >
+                  <Send className="h-3 w-3" />
+                  <span className="inline sm:hidden md:hidden lg:inline">{loading ? 'Enviando...' : 'Enviar'}</span>
+                  <span className="hidden sm:inline md:inline lg:hidden">{loading ? '...' : 'Enviar'}</span>
+                </Button>
+              )}
+            </div>
             
-            {/* Botón de enviar evaluación */}
-            <Button
-              size="sm"
-              onClick={openSubmitDialog}
-              disabled={loading}
-              className="gap-1 h-7 flex-grow md:flex-grow-0"
-            >
-              <Send className="h-3 w-3" />
-              <span className="inline sm:hidden md:hidden lg:inline">{loading ? 'Enviando...' : 'Enviar'}</span>
-              <span className="hidden sm:inline md:inline lg:hidden">{loading ? '...' : 'Enviar'}</span>
-            </Button>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span><FullscreenToggle className="flex-shrink-0 h-7 w-7" /></span>
-                </TooltipTrigger>
-                <TooltipContent className="text-xs">Pantalla completa</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <ApiKeyButton 
-              className="flex-shrink-0 h-7 w-7" 
-              isOpen={isApiKeyDialogOpen}
-              onOpenChange={setIsApiKeyDialogOpen}
-            />
-            
-            <TabSwitchCounter count={tabSwitchCount} className="flex-shrink-0 h-7" />
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div><ThemeToggle className="flex-shrink-0" /></div>
-                </TooltipTrigger>
-                <TooltipContent className="text-xs">Cambiar tema</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Grupo de botones de utilidad - lado derecho */}
+            <div className="flex items-center gap-2">
+              {!isHelpMode && (
+                <>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span><FullscreenToggle className="flex-shrink-0 h-7 w-7" /></span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Pantalla completa</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <ApiKeyButton 
+                    className="flex-shrink-0 h-7 w-7" 
+                    isOpen={isApiKeyDialogOpen}
+                    onOpenChange={setIsApiKeyDialogOpen}
+                  />
+                  
+                  <TabSwitchCounter count={tabSwitchCount} className="flex-shrink-0 h-7" />
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div><ThemeToggle className="flex-shrink-0" /></div>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Cambiar tema</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </>
+              )}
+              
+              {/* Botón de ayuda - extremo derecho */}
+              {(evaluation?.helpUrl || currentQuestion.helpUrl) && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setIsHelpMode(!isHelpMode)}
+                  className={cn(
+                    "h-7 px-2 text-xs font-medium shadow-md hover:shadow-lg transition-all duration-200",
+                    isHelpMode 
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white" 
+                      : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                  )}
+                  title={isHelpMode ? "Volver a la evaluación" : "Ver recursos de ayuda"}
+                >
+                  {isHelpMode ? (
+                    <PenTool className="h-3 w-3" />
+                  ) : (
+                    <HelpCircle className="h-3 w-3" />
+                  )}
+                  <span className="hidden sm:inline ml-1">
+                    {isHelpMode ? 'Volver a la evaluación' : 'Ayuda'}
+                  </span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
