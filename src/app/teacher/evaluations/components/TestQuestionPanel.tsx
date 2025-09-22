@@ -78,7 +78,7 @@ export function TestQuestionPanel({ text, type, language }: TestQuestionPanelPro
     try {
       const generated = await generateAnswer(text, language, apiKey);
       setAnswer(generated);
-    } catch (error) {
+    } catch {
       setAnswer('Error al generar la respuesta.');
     } finally {
       setIsGenerating(false);

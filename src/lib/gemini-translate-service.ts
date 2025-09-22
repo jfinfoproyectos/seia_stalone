@@ -113,7 +113,7 @@ export async function transcribeTranslateAndTTSWithGemini(
   audioBase64: string,
   targetLang: string,
   options?: { timestamps?: boolean; ttsVoice?: string; returnAudio?: boolean }
-, apiKey?: string): Promise<{ transcript: string, translation: string, audio?: Blob }> {
+): Promise<{ transcript: string, translation: string, audio?: Blob }> {
   // Primero transcribe y traduce
   const { transcript, translation } = await transcribeAndTranslateAudioWithGemini(audioBase64, targetLang, { timestamps: options?.timestamps });
   let audio: Blob | undefined = undefined;
@@ -135,7 +135,7 @@ export async function generateSegmentedTTSWithGemini(
   translation: string,
   lang: string,
   voiceName: string = 'Kore'
-, apiKey?: string): Promise<Blob> {
+): Promise<Blob> {
   // Extrae segmentos con timestamp: [hh:mm:ss] texto
   const segmentRegex = /\[(\d{2}:\d{2}:\d{2})\]\s*([^\[]+)/g;
   const matches = Array.from(translation.matchAll(segmentRegex));

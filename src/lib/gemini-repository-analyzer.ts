@@ -68,8 +68,7 @@ export interface AnalysisRequest {
 export async function getRepositoryStructure(
   repoUrl: string,
   githubToken?: string,
-  branch?: string,
-  apiKey?: string
+  branch?: string
 ): Promise<RepositoryStructure> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
@@ -205,8 +204,7 @@ export async function getRepositoryStructure(
 export async function getFileContent(
   repoUrl: string,
   filePath: string,
-  githubToken?: string,
-  apiKey?: string
+  githubToken?: string
 ): Promise<string> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',

@@ -15,8 +15,7 @@ import { es } from 'date-fns/locale';
 import { type DisplayUser, deleteUser, updateUserFull } from "../actions";
 import { useTransition, useState, useEffect } from "react";
 
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+
 
 interface Area {
   id: number;

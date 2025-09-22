@@ -271,7 +271,7 @@ Formato:
  */
 export async function exportTutorialAsPDF(
   tutorial: TutorialResult
-, apiKey?: string): Promise<Uint8Array> {
+): Promise<Uint8Array> {
   try {
     const doc = generateTutorialPdf(tutorial, {
       includeMetadata: true,

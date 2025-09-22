@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 export interface GitHubFileContent {
   name: string;
@@ -80,7 +81,7 @@ export async function getSpecificFile(
   repoUrl: string,
   filePath: string,
   githubToken?: string
-, apiKey?: string): Promise<GitHubFileContent | null> {
+): Promise<GitHubFileContent | null> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
   };
@@ -132,7 +133,7 @@ export async function getSpecificFile(
 export async function getRepositoryFiles(
   repoUrl: string,
   githubToken?: string
-, apiKey?: string): Promise<GitHubFileContent[]> {
+): Promise<GitHubFileContent[]> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
   };
@@ -220,7 +221,7 @@ export async function evaluateGitHubActivity(
   studentName: string,
   activityDescription: string,
   githubToken?: string
-, apiKey?: string): Promise<GitHubEvaluationResult> {
+): Promise<GitHubEvaluationResult> {
   try {
     // Obtener archivos del repositorio
     const files = await getRepositoryFiles(repoUrl, githubToken);
@@ -234,6 +235,7 @@ export async function evaluateGitHubActivity(
       `ARCHIVO: ${file.name} (${file.language})\nRUTA: ${file.path}\nCONTENIDO:\n${file.content}\n\n---\n`
     ).join('\n');
 
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -327,7 +329,7 @@ export async function evaluateMultipleRepositories(
   repositories: { url: string; studentName: string }[],
   activityDescription: string,
   githubToken?: string
-, apiKey?: string): Promise<GitHubEvaluationResult[]> {
+): Promise<GitHubEvaluationResult[]> {
   const results: GitHubEvaluationResult[] = [];
   
   for (const repo of repositories) {
@@ -382,7 +384,7 @@ export async function evaluateIndividualActivity(
   activityDescription: string,
   solutionFile: string,
   githubToken?: string
-, apiKey?: string): Promise<IndividualActivityEvaluation> {
+): Promise<IndividualActivityEvaluation> {
   try {
     // Buscar el archivo de solución específico
     const solutionFileContent = await getSpecificFile(repoUrl, solutionFile, githubToken);
@@ -427,6 +429,7 @@ export async function evaluateIndividualActivity(
       };
     }
 
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -661,7 +664,7 @@ function generateForkRecommendations(evaluations: IndividualActivityEvaluation[]
 export async function getPersistedEvaluations(
   originalRepoUrl: string,
   githubToken?: string
-, apiKey?: string): Promise<PersistedEvaluations | null> {
+): Promise<PersistedEvaluations | null> {
   try {
     const evaluationsFile = await getSpecificFile(originalRepoUrl, 'evaluations.json', githubToken);
     
@@ -692,7 +695,7 @@ export async function saveEvaluationToRepository(
   evaluation: ComprehensiveForkEvaluation,
   evaluatedBy: string,
   githubToken: string
-, apiKey?: string): Promise<boolean> {
+): Promise<boolean> {
   try {
     // Recuperar evaluaciones existentes
     const existingEvaluations = await getPersistedEvaluations(originalRepoUrl, githubToken) || {};
@@ -768,7 +771,7 @@ export async function getExistingEvaluation(
   originalRepoUrl: string,
   forkUrl: string,
   githubToken?: string
-, apiKey?: string): Promise<ComprehensiveForkEvaluation | null> {
+): Promise<ComprehensiveForkEvaluation | null> {
   try {
     const evaluations = await getPersistedEvaluations(originalRepoUrl, githubToken);
     
@@ -800,7 +803,7 @@ export async function reEvaluateIndividualActivity(
   activityIndex: number,
   activities: ActivitySolution[],
   githubToken?: string
-, apiKey?: string): Promise<ComprehensiveForkEvaluation | null> {
+): Promise<ComprehensiveForkEvaluation | null> {
   try {
     // Validar que se proporcione githubToken
     if (!githubToken) {

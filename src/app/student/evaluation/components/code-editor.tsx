@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import { useMonacoConfig } from '../hooks/useMonacoConfig';
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { editor } from 'monaco-editor';
 
 // Declaración de tipo para window.monaco
@@ -154,18 +154,19 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
 
               // Interceptar el método executeEdits para bloquear pegado
               const originalExecuteEdits = editor.executeEdits;
-              editor.executeEdits = (source: string, edits: any[], endCursorState?: any) => {
+              editor.executeEdits = (source: string, edits: editor.IIdentifiedSingleEditOperation[], endCursorState?: unknown) => {
                 // Bloquear solo si la fuente es explícitamente paste o clipboard
                 if (source === 'paste' || source === 'clipboard') {
                   console.warn('[CodeEditor] Operación de pegado bloqueada desde executeEdits:', source);
                   return false;
                 }
-                return originalExecuteEdits.call(editor, source, edits, endCursorState);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                return originalExecuteEdits.call(editor, source, edits, endCursorState as any);
               };
 
               // Interceptar el método trigger para bloquear comandos de pegado
               const originalTrigger = editor.trigger;
-              editor.trigger = (source: string, handlerId: string, payload: any) => {
+              editor.trigger = (source: string, handlerId: string, payload: unknown) => {
                 const pasteCommands = [
                   'paste', 
                   'editor.action.clipboardPasteAction', 
@@ -178,9 +179,10 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
                 }
                 
                 // Para el comando 'type', solo bloquear si es claramente un pegado
-                if (handlerId === 'type' && payload && payload.text) {
+                if (handlerId === 'type' && payload && typeof payload === 'object' && 'text' in payload) {
+                  const typedPayload = payload as { text: string };
                   // Bloquear solo si el texto es muy largo Y contiene múltiples líneas (típico de pegado)
-                  if (payload.text.length > 100 && payload.text.includes('\n')) {
+                  if (typedPayload.text.length > 100 && typedPayload.text.includes('\n')) {
                     console.warn('[CodeEditor] Pegado de múltiples líneas detectado y bloqueado');
                     return Promise.resolve();
                   }

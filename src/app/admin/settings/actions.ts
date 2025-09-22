@@ -1,8 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { encrypt, decrypt } from '@/lib/crypto';
-import { prisma } from '@/lib/prisma';
 
 // Funciones removidas: getGlobalSettings y updateGlobalApiKey
 // El modelo globalSettings no existe en el esquema actual de Prisma
@@ -13,7 +11,7 @@ export async function getGlobalSettings() {
   return null;
 }
 
-export async function updateGlobalApiKey(apiKey: string) {
+export async function updateGlobalApiKey() {
   // No se puede actualizar ya que no existe el modelo globalSettings
   // Esta funcionalidad debe implementarse de otra manera
   revalidatePath('/admin/settings');

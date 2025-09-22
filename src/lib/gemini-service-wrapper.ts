@@ -14,7 +14,7 @@ import { getApiKey } from './apiKeyService';
  * @param args - Argumentos para la función del servicio (sin incluir la API key)
  * @returns Resultado de la función del servicio
  */
-export async function withApiKey<T extends any[], R>(
+export async function withApiKey<T extends unknown[], R>(
   serviceFunction: (...args: [...T, string]) => Promise<R>,
   ...args: T
 ): Promise<R> {
@@ -27,7 +27,7 @@ export async function withApiKey<T extends any[], R>(
  * Verifica que haya API key antes de ejecutar
  */
 export function useGeminiService() {
-  const executeService = async <T extends any[], R>(
+  const executeService = async <T extends unknown[], R>(
     serviceFunction: (...args: [...T, string]) => Promise<R>,
     ...args: T
   ): Promise<R> => {
@@ -52,7 +52,7 @@ export function checkApiKeyAvailable(): boolean {
   try {
     getApiKey();
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
