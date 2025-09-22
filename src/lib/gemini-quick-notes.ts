@@ -12,7 +12,7 @@ export type QuickNotesOutputType =
   | 'letter'
   | 'custom';
 
-export async function generateQuickNotesOutput(notes: string[], outputType: QuickNotesOutputType, customPrompt?: string, apiKey?: string): Promise<string> {
+export async function generateQuickNotesOutput(notes: string[], outputType: QuickNotesOutputType, apiKey: string, customPrompt?: string): Promise<string> {
   if (!notes || notes.length === 0) {
     return 'No se proporcionaron notas para procesar.';
   }
@@ -68,9 +68,10 @@ export async function generateQuickNotesOutput(notes: string[], outputType: Quic
 /**
  * Resume un texto largo usando Gemini, con un prompt dedicado a resumen profesional en español.
  * @param text Texto a resumir
+ * @param apiKey API key de Gemini
  * @returns Resumen generado por Gemini
  */
-export async function generateGeminiSummary(text: string, apiKey?: string): Promise<string> {
+export async function generateGeminiSummary(text: string, apiKey: string): Promise<string> {
   if (!text || text.trim().length === 0) {
     return 'No se proporcionó texto para resumir.';
   }

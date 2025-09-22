@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 export interface MermaidDiagramResult {
   mermaidCode: string;
@@ -26,10 +27,10 @@ export interface MermaidOptimizationResult {
 export async function generateMermaidDiagram(
   userPrompt: string,
   diagramType?: string,
-  complexity: 'simple' | 'medium' | 'complex' = 'medium',
-  apiKey?: string
+  complexity: 'simple' | 'medium' | 'complex' = 'medium'
 ): Promise<MermaidDiagramResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -151,10 +152,10 @@ Genera el diagrama Mermaid más apropiado para esta descripción.
  */
 export async function optimizeMermaidCode(
   existingCode: string,
-  improvementGoals: string[],
-  apiKey?: string
+  improvementGoals: string[]
 ): Promise<MermaidOptimizationResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -220,10 +221,10 @@ Responde ÚNICAMENTE con un objeto JSON válido:
  * @returns Resultado de validación con sugerencias
  */
 export async function validateMermaidCode(
-  mermaidCode: string,
-  apiKey?: string
+  mermaidCode: string
 ): Promise<{ isValid: boolean; errors: string[]; suggestions: string[] }> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -289,10 +290,10 @@ Responde ÚNICAMENTE con un objeto JSON válido:
  */
 export async function generateMermaidVariations(
   baseDiagram: string,
-  variationTypes: string[] = ['style', 'layout', 'complexity'],
-  apiKey?: string
+  variationTypes: string[] = ['style', 'layout', 'complexity']
 ): Promise<string[]> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -350,12 +351,13 @@ Responde ÚNICAMENTE con un array JSON de strings:
  * @param prompt Prompt original a corregir
  * @returns Prompt corregido
  */
-export async function correctPromptWriting(prompt: string, apiKey?: string): Promise<string> {
+export async function correctPromptWriting(prompt: string): Promise<string> {
   try {
     if (!prompt.trim()) {
       throw new Error('El prompt no puede estar vacío');
     }
 
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

@@ -154,14 +154,13 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
 
               // Interceptar el método executeEdits para bloquear pegado
               const originalExecuteEdits = editor.executeEdits;
-              editor.executeEdits = (source: string, edits: editor.IIdentifiedSingleEditOperation[], endCursorState?: unknown) => {
+              editor.executeEdits = (source: string, edits: editor.IIdentifiedSingleEditOperation[], endCursorState?: editor.ICursorStateComputer) => {
                 // Bloquear solo si la fuente es explícitamente paste o clipboard
                 if (source === 'paste' || source === 'clipboard') {
                   console.warn('[CodeEditor] Operación de pegado bloqueada desde executeEdits:', source);
                   return false;
                 }
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                return originalExecuteEdits.call(editor, source, edits, endCursorState as any);
+                return originalExecuteEdits.call(editor, source, edits, endCursorState);
               };
 
               // Interceptar el método trigger para bloquear comandos de pegado

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 export interface RepositoryFile {
@@ -276,8 +277,7 @@ export async function getSelectedFilesContent(
  */
 export async function analyzeRepositoryElements(
   analysisRequest: AnalysisRequest,
-  githubToken?: string,
-  apiKey?: string
+  githubToken?: string
 ): Promise<AnalysisResult> {
   try {
     const { repositoryStructure, selectedItems, customPrompt, includeContent } = analysisRequest;
@@ -327,6 +327,7 @@ ${selectedFiles.map(f => `- ${f.path}`).join('\n')}
 DIRECTORIOS SELECCIONADOS:
 ${selectedDirectories.map(d => `- ${d.path}/`).join('\n')}`;
 
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -523,12 +524,13 @@ export function flattenRepositoryStructure(structure: RepositoryStructure): Sele
  * @param prompt Prompt original a corregir
  * @returns Prompt corregido
  */
-export async function correctPromptWriting(prompt: string, apiKey?: string): Promise<string> {
+export async function correctPromptWriting(prompt: string): Promise<string> {
   try {
     if (!prompt.trim()) {
       throw new Error('El prompt no puede estar vacío');
     }
 
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

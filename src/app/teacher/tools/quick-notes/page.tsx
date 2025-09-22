@@ -3,8 +3,8 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StickyNote, Sparkles, Pencil, Trash2, Loader2, Copy, Info, Trash, Star, StarOff, FileText, Upload, Download } from 'lucide-react';
-import { generateNotesWithGemini } from './actions';
-import { generateGeminiSummary } from '@/lib/gemini-quick-notes';
+import { generateNotesWithGemini, generateSummaryWithGemini } from './actions';
+import { getApiKeyFromStorage } from '@/lib/apiKeyService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -103,6 +103,13 @@ export default function QuickNotesPanel() {
     setLoading(true);
     setError('');
     try {
+      const apiKey = getApiKeyFromStorage();
+      if (!apiKey) {
+        setError('API Key de Gemini no configurada. Por favor, configura tu API key en la configuración.');
+        setLoading(false);
+        return;
+      }
+
       let prompt = outputType;
       let label = outputOptions.find(opt => opt.value === outputType)?.label || outputType;
       let type = outputType;
@@ -113,7 +120,7 @@ export default function QuickNotesPanel() {
         type = 'custom';
         customPromptValue = customPrompt.trim();
       }
-      const res = await generateNotesWithGemini(notes, type as import('@/lib/gemini-quick-notes').QuickNotesOutputType, prompt);
+      const res = await generateNotesWithGemini(notes, type as import('@/lib/gemini-quick-notes').QuickNotesOutputType, apiKey, prompt);
       setResults([
         {
           id: Date.now().toString() + Math.random().toString(36).slice(2),
@@ -158,7 +165,14 @@ export default function QuickNotesPanel() {
     setSummarizingId(result.id);
     setError('');
     try {
-      const summary = await generateGeminiSummary(result.content);
+      const apiKey = getApiKeyFromStorage();
+      if (!apiKey) {
+        setError('API Key de Gemini no configurada. Por favor, configura tu API key en la configuración.');
+        setSummarizingId(null);
+        return;
+      }
+
+      const summary = await generateSummaryWithGemini(result.content, apiKey);
       setResults(prev => prev.map(r => r.id === result.id ? { ...r, content: summary, label: 'Resumen', type: 'summary' } : r));
     } catch {
       setError('No se pudo resumir el resultado.');

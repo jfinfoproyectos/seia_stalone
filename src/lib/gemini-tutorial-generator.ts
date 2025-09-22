@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { generateTutorialPdf } from './tutorial-pdf-generator';
+import { getApiKey } from './apiKeyService';
 
 export interface TutorialConfig {
   topic: string;
@@ -48,8 +49,9 @@ export interface TutorialOptimizationResult {
  * @param config - Configuración del tutorial
  * @returns Resultado con el tutorial generado
  */
-export async function generateTutorial(config: TutorialConfig, apiKey?: string): Promise<TutorialResult> {
+export async function generateTutorial(config: TutorialConfig): Promise<TutorialResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -88,8 +90,9 @@ export async function generateTutorial(config: TutorialConfig, apiKey?: string):
 export async function optimizeTutorial(
   existingContent: string,
   optimizationGoals: string[]
-, apiKey?: string): Promise<TutorialOptimizationResult> {
+): Promise<TutorialOptimizationResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -155,8 +158,9 @@ Formato de respuesta:
 export async function generateTutorialVariations(
   baseTutorial: string,
   variationTypes: string[] = ['audience', 'style', 'format']
-, apiKey?: string): Promise<string[]> {
+): Promise<string[]> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -200,8 +204,9 @@ Proporciona solo el contenido de la variación:
  */
 export async function validateTutorial(
   tutorialContent: string
-, apiKey?: string): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
+): Promise<{ isValid: boolean; issues: string[]; suggestions: string[] }> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -294,8 +299,9 @@ export async function exportTutorialAsPDF(
  * @param prompt - Prompt a corregir
  * @returns Prompt corregido
  */
-export async function correctTutorialPrompt(prompt: string, apiKey?: string): Promise<string> {
+export async function correctTutorialPrompt(prompt: string): Promise<string> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

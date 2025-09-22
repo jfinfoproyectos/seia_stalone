@@ -1,7 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
-export async function translateTextWithGemini(text: string, targetLang: string, apiKey?: string): Promise<string> {
+export async function translateTextWithGemini(text: string, targetLang: string): Promise<string> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -19,7 +21,8 @@ export async function transcribeAndTranslateAudioWithGemini(
   audioBase64: string,
   targetLang: string,
   options?: { timestamps?: boolean }
-, apiKey?: string): Promise<{ transcript: string, translation: string }> {
+): Promise<{ transcript: string, translation: string }> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -56,9 +59,10 @@ export async function generateTTSWithGemini(
   text: string,
   lang: string,
   voiceName: string = 'Kore'
-, apiKey?: string): Promise<Blob> {
+): Promise<Blob> {
   // Usa el texto exactamente como fue transcrito, sin agregar instrucciones de estilo
   const ttsText = text;
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

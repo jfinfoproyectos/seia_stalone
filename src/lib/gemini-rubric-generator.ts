@@ -1,4 +1,5 @@
 import { GoogleGenAI, createUserContent } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 export interface RubricCriterion {
@@ -18,7 +19,8 @@ export interface RubricResult {
  * @param prompt Descripción de la actividad, objetivo o contexto
  * @returns Rúbrica generada con criterios, descriptores y escalas
  */
-export async function generateRubricWithGemini(prompt: string, apiKey?: string): Promise<RubricResult> {
+export async function generateRubricWithGemini(prompt: string): Promise<RubricResult> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -61,7 +63,8 @@ Devuelve SOLO en JSON con la estructura:
  * @param contenido Texto del criterio a corregir
  * @returns Criterio corregido
  */
-export async function corregirRedaccionCriterioRubrica(contenido: string, apiKey?: string): Promise<string> {
+export async function corregirRedaccionCriterioRubrica(contenido: string): Promise<string> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -72,4 +75,4 @@ export async function corregirRedaccionCriterioRubrica(contenido: string, apiKey
     contents: createUserContent([prompt]),
   });
   return (response.text || '').trim();
-} 
+}

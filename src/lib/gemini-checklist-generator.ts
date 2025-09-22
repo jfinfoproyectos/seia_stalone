@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 /**
@@ -13,7 +14,8 @@ import { GoogleGenAI } from "@google/genai";
  *     language: 'es'
  *   });
  */
-export async function generateChecklistWithGemini({ instructions, language = 'es' }: { instructions: string, language?: 'es' | 'en' }, apiKey?: string): Promise<string> {
+export async function generateChecklistWithGemini({ instructions, language = 'es' }: { instructions: string, language?: 'es' | 'en' }): Promise<string> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

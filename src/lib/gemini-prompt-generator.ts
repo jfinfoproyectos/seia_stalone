@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 export interface PromptSuggestion {
@@ -36,10 +37,10 @@ export async function generateOptimizedPrompt(
   userRequest: string,
   promptType: string,
   techniques: string[],
-  context?: string,
-  apiKey?: string
+  context?: string
 ): Promise<GeneratedPromptResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -164,10 +165,10 @@ export async function generateOptimizedPrompt(
  */
 export async function optimizeExistingPrompt(
   existingPrompt: string,
-  improvementGoals: string[],
-  apiKey?: string
+  improvementGoals: string[]
 ): Promise<PromptOptimizationResult> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -231,10 +232,10 @@ export async function optimizeExistingPrompt(
  * @returns Array de sugerencias de mejora
  */
 export async function analyzePromptQuality(
-  promptToAnalyze: string,
-  apiKey?: string
+  promptToAnalyze: string
 ): Promise<{ score: number; suggestions: string[]; strengths: string[] }> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -300,10 +301,10 @@ export async function analyzePromptQuality(
  */
 export async function generatePromptVariations(
   basePrompt: string,
-  variationCount: number = 3,
-  apiKey?: string
+  variationCount: number = 3
 ): Promise<string[]> {
   try {
+    const apiKey = await getApiKey();
     if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

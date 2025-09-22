@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 export const GEMINI_TTS_VOICES = [
@@ -43,7 +44,8 @@ export interface GeneratePodcastAudioParams {
  *     language: 'es'
  *   });
  */
-export async function generatePodcastAudioWithGemini({ script, mode, speakers, language = 'es' }: GeneratePodcastAudioParams, apiKey?: string): Promise<Blob> {
+export async function generatePodcastAudioWithGemini({ script, mode, speakers, language = 'es' }: GeneratePodcastAudioParams): Promise<Blob> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -184,7 +186,8 @@ function pcmToWav(pcmData: Uint8Array, sampleRate = 24000, numChannels = 1, bits
  * @param params.language Idioma ('es' o 'en'), por defecto 'es'
  * @returns Guion generado como string, listo para TTS
  */
-export async function generatePodcastScriptWithGemini({ topic, mode, speakers, language = 'es' }: { topic: string, mode: PodcastMode, speakers: PodcastSpeaker[], language?: 'es' | 'en' }, apiKey?: string): Promise<string> {
+export async function generatePodcastScriptWithGemini({ topic, mode, speakers, language = 'es' }: { topic: string, mode: PodcastMode, speakers: PodcastSpeaker[], language?: 'es' | 'en' }): Promise<string> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }

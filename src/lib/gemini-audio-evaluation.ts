@@ -1,4 +1,5 @@
 import { GoogleGenAI, createUserContent, createPartFromUri } from "@google/genai";
+import { getApiKey } from './apiKeyService';
 
 
 export interface AudioSegmentEvaluation {
@@ -34,7 +35,8 @@ export interface AudioFlexibleEvaluationResult {
  * @param criterios Lista de criterios de evaluación
  * @returns Evaluación estructurada por segmentos
  */
-export async function evaluateAudioWithGemini(audio: File | Blob, criterios: string[], apiKey?: string): Promise<AudioEvaluationResult> {
+export async function evaluateAudioWithGemini(audio: File | Blob, criterios: string[]): Promise<AudioEvaluationResult> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -76,7 +78,8 @@ export async function evaluateAudioWithGemini(audio: File | Blob, criterios: str
  * @param contenido Texto del criterio a corregir
  * @returns Criterio corregido
  */
-export async function corregirRedaccionCriterio(contenido: string, apiKey?: string): Promise<string> {
+export async function corregirRedaccionCriterio(contenido: string): Promise<string> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -94,7 +97,8 @@ export async function corregirRedaccionCriterio(contenido: string, apiKey?: stri
  * @param prompt Instrucción o contexto para generar los criterios
  * @returns Array de criterios [{descripcion, minutos, segundos, porcentaje}]
  */
-export async function generateCriteriosWithGemini(prompt: string, apiKey?: string): Promise<{descripcion: string, minutos: string, segundos: string, porcentaje: string}[]> {
+export async function generateCriteriosWithGemini(prompt: string): Promise<{descripcion: string, minutos: string, segundos: string, porcentaje: string}[]> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -155,9 +159,9 @@ export async function evaluateAudioFlexibleWithGemini(
     criterios?: { descripcion: string; minutos: string; segundos: string; porcentaje: string }[],
     usarMarcasDeTiempo?: boolean,
     usarPorcentaje?: boolean
-  },
-  apiKey?: string
+  }
 ): Promise<AudioFlexibleEvaluationResult> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
@@ -215,9 +219,9 @@ export async function evaluateAudioFlexibleWithGemini(
  */
 export async function redistributeCriteriosWithGemini(
   criterios: { descripcion: string; minutos: string; segundos: string; porcentaje: string }[],
-  duracionTotal: number,
-  apiKey?: string
+  duracionTotal: number
 ): Promise<{ descripcion: string; minutos: string; segundos: string; porcentaje: string }[]> {
+  const apiKey = await getApiKey();
   if (!apiKey) {
       throw new Error('API Key de Gemini es requerida');
     }
