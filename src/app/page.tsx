@@ -9,6 +9,7 @@ import {  Book, PenTool, LineChart, Clock, ArrowRight, Shield,  Code, CheckCircl
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { CardStack } from "@/components/ui/card-stack";
 
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const { data: session, status } = useSession();
