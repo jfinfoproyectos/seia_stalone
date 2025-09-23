@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Sun, Moon, Palette } from "lucide-react";
+import { Sun, Moon, Palette, Monitor, Droplets, Zap, BookOpen, Candy, Pencil, Leaf, Clock, Flower, MessageCircle, Coffee, Cpu, Atom, Minimize2, Citrus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
 
@@ -22,6 +22,52 @@ interface ThemeOption {
     accent: string;
   };
 }
+
+// Función para obtener el icono apropiado para cada tema
+const getThemeIcon = (themeValue: string) => {
+  switch (themeValue) {
+    case "light":
+      return <Sun className="w-4 h-4" />;
+    case "dark":
+      return <Moon className="w-4 h-4" />;
+    case "system":
+      return <Monitor className="w-4 h-4" />;
+    case "purple-theme":
+      return <Droplets className="w-4 h-4" />;
+    case "amber-theme":
+      return <Sun className="w-4 h-4" />;
+    case "blue-theme":
+      return <Droplets className="w-4 h-4" />;
+    case "bold-tech":
+      return <Zap className="w-4 h-4" />;
+    case "notebook":
+      return <BookOpen className="w-4 h-4" />;
+    case "candyland":
+      return <Candy className="w-4 h-4" />;
+    case "graphite":
+      return <Pencil className="w-4 h-4" />;
+    case "nature":
+      return <Leaf className="w-4 h-4" />;
+    case "perpetuity":
+      return <Clock className="w-4 h-4" />;
+    case "quantum-rose":
+      return <Flower className="w-4 h-4" />;
+    case "twitter":
+      return <MessageCircle className="w-4 h-4" />;
+    case "caffeine":
+      return <Coffee className="w-4 h-4" />;
+    case "cyberpunk":
+      return <Cpu className="w-4 h-4" />;
+    case "darkmatter":
+      return <Atom className="w-4 h-4" />;
+    case "modern-minimal":
+      return <Minimize2 className="w-4 h-4" />;
+    case "tangerine":
+      return <Citrus className="w-4 h-4" />;
+    default:
+      return <Palette className="w-4 h-4" />;
+  }
+};
 
 // Componente para mostrar la paleta de colores del tema
 const ThemePalette = ({ colors }: { colors: ThemeOption["colors"] }) => {
@@ -70,6 +116,12 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       "nature",
       "perpetuity",
       "quantum-rose",
+      "twitter",
+      "caffeine",
+      "cyberpunk",
+      "darkmatter",
+      "modern-minimal",
+      "tangerine",
     );
     
     // Guardar el tema seleccionado en localStorage para recordarlo
@@ -80,20 +132,26 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       document.documentElement.classList.add(themeValue);
       setCustomTheme(themeValue);
       
-      // Para temas personalizados, mantener el modo claro/oscuro actual
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const currentTheme = theme || 'system';
-      const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
-      
-      // Mantener el modo oscuro/claro actual usando setTheme
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-        // Asegurarse de que next-themes sepa que estamos en modo oscuro
-        setTheme('dark');
-      } else {
+      // Para el tema twitter, establecer modo claro por defecto
+      if (themeValue === "twitter") {
         document.documentElement.classList.remove('dark');
-        // Asegurarse de que next-themes sepa que estamos en modo claro
         setTheme('light');
+      } else {
+        // Para otros temas personalizados, mantener el modo claro/oscuro actual
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const currentTheme = theme || 'system';
+        const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
+        
+        // Mantener el modo oscuro/claro actual usando setTheme
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          // Asegurarse de que next-themes sepa que estamos en modo oscuro
+          setTheme('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          // Asegurarse de que next-themes sepa que estamos en modo claro
+          setTheme('light');
+        }
       }
     } else {
       // Para temas estándar (light/dark/system), usar next-themes
@@ -106,15 +164,15 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   useEffect(() => {
     setMounted(true);
     
-    // Restaurar el tema personalizado si existe en localStorage o establecer blue-theme por defecto
+    // Restaurar el tema personalizado si existe en localStorage o establecer twitter por defecto
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('selected-theme');
       if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
         setCustomTheme(savedTheme);
       } else {
-        // Establecer blue-theme como predeterminado si no hay tema guardado
-        setCustomTheme('blue-theme');
-        applyTheme('blue-theme');
+        // Establecer twitter como predeterminado si no hay tema guardado
+        setCustomTheme('twitter');
+        applyTheme('twitter');
       }
     }
   }, [applyTheme]);
@@ -133,9 +191,9 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         setCustomTheme(savedTheme);
       }
     } else {
-      // Si no hay tema guardado, aplicar blue-theme como predeterminado
-      applyTheme("blue-theme");
-      setCustomTheme("blue-theme");
+      // Si no hay tema guardado, aplicar twitter como predeterminado
+      applyTheme("twitter");
+      setCustomTheme("twitter");
     }
   }, [applyTheme]);
 
@@ -237,7 +295,7 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
     { 
       name: "Graphite", 
       value: "graphite", 
-      description: "Tema elegante en tonos grises",
+      description: "Tema elegante en grises",
       colors: {
         background: "#f8f9fa",
         primary: "#495057",
@@ -257,21 +315,81 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
     { 
       name: "Perpetuity", 
       value: "perpetuity", 
-      description: "Tema atemporal y elegante",
+      description: "Tema atemporal",
       colors: {
-        background: "#f5f5f5",
+        background: "#fafafa",
         primary: "#2c3e50",
-        accent: "#3498db"
+        accent: "#34495e"
       }
     },
     { 
       name: "Quantum Rose", 
       value: "quantum-rose", 
-      description: "Tema futurista con tonos rosa",
+      description: "Tema rosa cuántico",
       colors: {
-        background: "#fdf2f8",
-        primary: "#e91e63",
-        accent: "#f8bbd9"
+        background: "#fff0f5",
+        primary: "#c71585",
+        accent: "#dda0dd"
+      }
+    },
+    { 
+      name: "Twitter", 
+      value: "twitter", 
+      description: "Tema inspirado en Twitter",
+      colors: {
+        background: "#f7f9fa",
+        primary: "#1da1f2",
+        accent: "#71c9f8"
+      }
+    },
+    { 
+      name: "Caffeine", 
+      value: "caffeine", 
+      description: "Tema inspirado en el café",
+      colors: {
+        background: "#faf6f0",
+        primary: "#8b4513",
+        accent: "#d2b48c"
+      }
+    },
+    { 
+      name: "Cyberpunk", 
+      value: "cyberpunk", 
+      description: "Tema futurista cyberpunk",
+      colors: {
+        background: "#0a0a0a",
+        primary: "#00ff41",
+        accent: "#ff0080"
+      }
+    },
+    { 
+      name: "Dark Matter", 
+      value: "darkmatter", 
+      description: "Tema oscuro como la materia oscura",
+      colors: {
+        background: "#1a1a1a",
+        primary: "#b8860b",
+        accent: "#4169e1"
+      }
+    },
+    { 
+      name: "Modern Minimal", 
+      value: "modern-minimal", 
+      description: "Tema minimalista moderno",
+      colors: {
+        background: "#ffffff",
+        primary: "#6231a8",
+        accent: "#f3f4f6"
+      }
+    },
+    { 
+      name: "Tangerine", 
+      value: "tangerine", 
+      description: "Tema inspirado en la mandarina",
+      colors: {
+        background: "#fef3e2",
+        primary: "#ea580c",
+        accent: "#fed7aa"
       }
     },
   ];
@@ -367,7 +485,8 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
             onClick={() => applyTheme("system")}
             className="flex justify-between items-center"
           >
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              {getThemeIcon("system")}
               <ThemePalette colors={basicThemes.find(t => t.value === "system")?.colors} />
               <span>Predeterminado (Sistema)</span>
             </div>
@@ -381,7 +500,8 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
               onClick={() => applyTheme(themeOption.value)}
               className="flex justify-between items-center"
             >
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
+                {getThemeIcon(themeOption.value)}
                 <ThemePalette colors={themeOption.colors} />
                 <span>{themeOption.name}</span>
               </div>
