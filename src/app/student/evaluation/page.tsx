@@ -9,7 +9,7 @@ import { LANGUAGE_OPTIONS } from '@/lib/constants/languages'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 
-import { AlertCircle, CheckCircle, Clock, HelpCircle, Loader2, Send, Sparkles, XCircle, PenTool, MessageSquare } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, HelpCircle, Loader2, Send, Sparkles, XCircle, PenTool, MessageSquare, Maximize2, Minimize2 } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import ThemeToggle from '@/components/theme/ThemeToggle'
@@ -102,6 +102,7 @@ function EvaluationContent() {
   const [isEvaluationExpired, setIsEvaluationExpired] = useState(false);
   const [isPageHidden, setIsPageHidden] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isQuestionHidden, setIsQuestionHidden] = useState(false);
   // Variables de estado para pestañas eliminadas - solo modo columnas;
   const [lastFeedback, setLastFeedback] = useState<{[questionId: number]: {success: boolean; message: string; details?: string; grade?: number}} | null>(null);
 
@@ -962,10 +963,11 @@ function EvaluationContent() {
         </div>
       ) : (
         // Modo Normal - Dos columnas: pregunta y respuesta
-        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 p-4 flex-1 overflow-hidden">
+        <div className={`flex flex-col ${isQuestionHidden ? '' : 'lg:grid lg:grid-cols-2'} gap-2 p-2 flex-1 overflow-hidden`}>
           {/* Columna izquierda: Visualizador de Markdown */}
+          {!isQuestionHidden && (
           <Card className="flex flex-col overflow-hidden mb-2 lg:mb-0 flex-1">
-            <CardHeader className="py-2 px-4 flex-shrink-0">
+            <CardHeader className="py-0 px-4 flex-shrink-0">
               <CardTitle className="flex justify-between items-center text-base">
                 <span>Pregunta {currentQuestionIndex + 1}</span>
                 <div className="flex items-center gap-2">
@@ -981,10 +983,11 @@ function EvaluationContent() {
               />
             </CardContent>
           </Card>
+          )}
 
           {/* Columna derecha: Editor de respuesta */}
           <Card className="flex flex-col overflow-hidden flex-1">
-            <CardHeader className="py-2 px-4 flex-shrink-0">
+            <CardHeader className="py-0 px-4 flex-shrink-0">
               <CardTitle className="flex flex-wrap sm:flex-nowrap justify-between items-center text-base gap-1 sm:gap-0">
                 <span>Tu Respuesta</span>
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -1013,6 +1016,25 @@ function EvaluationContent() {
                       </Tooltip>
                     </TooltipProvider>
                   )}
+                  
+                  {/* Botón para ocultar/mostrar pregunta */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsQuestionHidden(!isQuestionHidden)}
+                          className="h-7 text-xs px-2"
+                        >
+                          {isQuestionHidden ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isQuestionHidden ? 'Mostrar pregunta' : 'Ocultar pregunta'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
                   <Button
                     size="sm"

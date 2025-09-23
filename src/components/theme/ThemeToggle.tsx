@@ -65,6 +65,11 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       "blue-theme",
       "bold-tech",
       "notebook",
+      "candyland",
+      "graphite",
+      "nature",
+      "perpetuity",
+      "quantum-rose",
     );
     
     // Guardar el tema seleccionado en localStorage para recordarlo
@@ -217,6 +222,56 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         background: "#fafafa",
         primary: "#7d7d7d",
         accent: "#f0e68c"
+      }
+    },
+    { 
+      name: "Candyland", 
+      value: "candyland", 
+      description: "Tema dulce y colorido",
+      colors: {
+        background: "#fff5f8",
+        primary: "#ff69b4",
+        accent: "#ffb6c1"
+      }
+    },
+    { 
+      name: "Graphite", 
+      value: "graphite", 
+      description: "Tema elegante en tonos grises",
+      colors: {
+        background: "#f8f9fa",
+        primary: "#495057",
+        accent: "#6c757d"
+      }
+    },
+    { 
+      name: "Nature", 
+      value: "nature", 
+      description: "Tema inspirado en la naturaleza",
+      colors: {
+        background: "#f0fff0",
+        primary: "#228b22",
+        accent: "#90ee90"
+      }
+    },
+    { 
+      name: "Perpetuity", 
+      value: "perpetuity", 
+      description: "Tema atemporal y elegante",
+      colors: {
+        background: "#f5f5f5",
+        primary: "#2c3e50",
+        accent: "#3498db"
+      }
+    },
+    { 
+      name: "Quantum Rose", 
+      value: "quantum-rose", 
+      description: "Tema futurista con tonos rosa",
+      colors: {
+        background: "#fdf2f8",
+        primary: "#e91e63",
+        accent: "#f8bbd9"
       }
     },
   ];

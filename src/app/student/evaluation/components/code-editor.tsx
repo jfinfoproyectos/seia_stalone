@@ -301,6 +301,12 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
           }}
         />
         
+        {/* Indicación de ayuda para zoom */}
+        {isEditorReady && (
+          <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/60 select-none pointer-events-none bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-border/30">
+            Ctrl + scroll para zoom
+          </div>
+        )}
 
       </div>
     </div>
