@@ -14,6 +14,40 @@ export const useMonacoConfig = () => {
 
   useEffect(() => {
     if (monaco && !themeInitializedRef.current) {
+      // Configurar soporte para TypeScript, JSX y TSX
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        target: monaco.languages.typescript.ScriptTarget.Latest,
+        allowNonTsExtensions: true,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        noEmit: true,
+        esModuleInterop: true,
+        jsx: monaco.languages.typescript.JsxEmit.React,
+        reactNamespace: 'React',
+        allowJs: true,
+        typeRoots: ['node_modules/@types']
+      });
+
+      monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: true,
+        noSyntaxValidation: true
+      });
+
+      // También deshabilitar validaciones para JavaScript
+      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: true,
+        noSyntaxValidation: true
+      });
+
+      // Registrar lenguajes JSX y TSX si no están registrados
+      const languages = monaco.languages.getLanguages();
+      if (!languages.find(lang => lang.id === 'jsx')) {
+        monaco.languages.register({ id: 'jsx' });
+      }
+      if (!languages.find(lang => lang.id === 'tsx')) {
+        monaco.languages.register({ id: 'tsx' });
+      }
+
       monaco.editor.defineTheme(monokaiThemeName, {
         ...Monokai,
         base: Monokai.base as "vs-dark"
@@ -32,6 +66,13 @@ export const useMonacoConfig = () => {
           { token: 'type', foreground: '267F99' },
           { token: 'class', foreground: '267F99' },
           { token: 'interface', foreground: '267F99' },
+          // Reglas específicas para JSX/TSX
+          { token: 'tag', foreground: '800000' },
+          { token: 'tag.bracket', foreground: '800000' },
+          { token: 'attribute.name', foreground: 'FF0000' },
+          { token: 'attribute.value', foreground: '0451A5' },
+          { token: 'delimiter.html', foreground: '800000' },
+          { token: 'metatag', foreground: 'e00000' },
         ],
         colors: {
           'editor.background': '#FFFFFF',

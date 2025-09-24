@@ -18,4 +18,5 @@ export const LANGUAGE_OPTIONS = [
   { value: 'css', label: 'CSS' },
   { value: 'json', label: 'JSON' },
   { value: 'jsx', label: 'JSX' },
+  { value: 'tsx', label: 'TSX' },
 ] as const;

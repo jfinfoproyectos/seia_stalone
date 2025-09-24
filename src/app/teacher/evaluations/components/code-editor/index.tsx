@@ -20,12 +20,24 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
   const { getEditorOptions, currentTheme } = useMonacoConfig();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
+  // Mapear lenguajes JSX/TSX a sus equivalentes de Monaco
+  const getMonacoLanguage = (lang: string) => {
+    switch (lang) {
+      case 'jsx':
+        return 'javascript'; // JSX se maneja como JavaScript con configuración especial
+      case 'tsx':
+        return 'typescript'; // TSX se maneja como TypeScript con configuración especial
+      default:
+        return lang;
+    }
+  };
+
   return (
     <div className="absolute inset-0 m-3 sm:m-4">
       <div className="h-full w-full border border-input rounded-md bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-1 focus-within:ring-ring overflow-hidden">
         <MonacoEditor
           height={height}
-          language={language}
+          language={getMonacoLanguage(language)}
           value={value}
           onChange={(value) => onChange(value || '')}
           options={{

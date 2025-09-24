@@ -1,9 +1,48 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useMonaco } from '@monaco-editor/react';
 
 export const useMonacoConfig = () => {
   const { theme } = useTheme();
   const [currentTheme, setCurrentTheme] = useState('vs-dark');
+  const monaco = useMonaco();
+
+  useEffect(() => {
+    if (monaco) {
+      // Configurar TypeScript para JSX
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        jsx: monaco.languages.typescript.JsxEmit.React,
+        jsxFactory: 'React.createElement',
+        reactNamespace: 'React',
+        allowNonTsExtensions: true,
+        allowJs: true,
+        target: monaco.languages.typescript.ScriptTarget.Latest,
+        allowSyntheticDefaultImports: true,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        module: monaco.languages.typescript.ModuleKind.ESNext,
+      });
+
+      // Deshabilitar validaciones para evitar errores molestos
+      monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: true,
+        noSyntaxValidation: true,
+      });
+
+      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: true,
+        noSyntaxValidation: true,
+      });
+
+      // Registrar lenguajes JSX y TSX si no están registrados
+      const languages = monaco.languages.getLanguages();
+      if (!languages.find(lang => lang.id === 'jsx')) {
+        monaco.languages.register({ id: 'jsx' });
+      }
+      if (!languages.find(lang => lang.id === 'tsx')) {
+        monaco.languages.register({ id: 'tsx' });
+      }
+    }
+  }, [monaco]);
 
   // Definir temas personalizados
   const defineCustomThemes = (monaco: unknown) => {
@@ -178,6 +217,14 @@ export const useMonacoConfig = () => {
           { token: 'function', foreground: '795e26' },
           { token: 'variable', foreground: '001080' },
           { token: 'operator', foreground: '0000ff' },
+          // Reglas específicas para JSX/TSX
+          { token: 'tag', foreground: '800000' },
+          { token: 'tag.id.jsx', foreground: '800000' },
+          { token: 'tag.class.jsx', foreground: '800000' },
+          { token: 'attribute.name.jsx', foreground: 'ff0000' },
+          { token: 'attribute.value.jsx', foreground: '0451a5' },
+          { token: 'delimiter.html', foreground: '800000' },
+          { token: 'delimiter.xml', foreground: '800000' },
         ],
         colors: {
           'editor.background': '#ffffff',

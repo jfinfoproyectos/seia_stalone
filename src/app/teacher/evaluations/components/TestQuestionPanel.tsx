@@ -16,6 +16,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
   javascript: 'JavaScript',
   python: 'Python',
   typescript: 'TypeScript',
+  jsx: 'JSX',
+  tsx: 'TSX',
   java: 'Java',
   c: 'C',
   cpp: 'C++',

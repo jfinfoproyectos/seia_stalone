@@ -34,6 +34,18 @@ interface CodeEditorProps {
   height?: string;
 }
 
+// Función para mapear lenguajes a los soportados por Monaco
+const getMonacoLanguage = (language: string): string => {
+  switch (language.toLowerCase()) {
+    case 'jsx':
+      return 'javascript';
+    case 'tsx':
+      return 'typescript';
+    default:
+      return language;
+  }
+};
+
 export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeEditorProps) => {
   const { getEditorOptions, currentTheme, defineCustomThemes } = useMonacoConfig();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -107,7 +119,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
       <div className="w-full h-full border border-input rounded-md bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring overflow-hidden relative">
         <MonacoEditor
           height={height}
-          language={language}
+          language={getMonacoLanguage(language)}
           value={value}
           onChange={(value) => handleChange(value || '')}
           options={{
