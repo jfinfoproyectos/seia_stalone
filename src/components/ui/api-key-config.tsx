@@ -122,7 +122,7 @@ export function ApiKeyConfig({
               type={showApiKey ? 'text' : 'password'}
               value={apiKey}
               onChange={(e) => handleInputChange(e.target.value)}
-              placeholder="AIza..."
+              placeholder="API Key"
               className="pr-10"
             />
             <Button

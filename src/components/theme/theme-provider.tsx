@@ -6,7 +6,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 export function ThemeProvider({
   children,
   attribute = "class",
-  defaultTheme = "dark",
+  defaultTheme = "system",
   enableSystem = true,
   disableTransitionOnChange = true,
 }: {

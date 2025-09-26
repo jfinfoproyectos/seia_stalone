@@ -132,26 +132,20 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       document.documentElement.classList.add(themeValue);
       setCustomTheme(themeValue);
       
-      // Para el tema twitter, establecer modo claro por defecto
-      if (themeValue === "twitter") {
-        document.documentElement.classList.remove('dark');
-        setTheme('light');
+      // Para todos los temas personalizados, mantener el modo claro/oscuro actual
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = theme || 'system';
+      const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
+      
+      // Mantener el modo oscuro/claro actual usando setTheme
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        // Asegurarse de que next-themes sepa que estamos en modo oscuro
+        setTheme('dark');
       } else {
-        // Para otros temas personalizados, mantener el modo claro/oscuro actual
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const currentTheme = theme || 'system';
-        const isDark = currentTheme === "dark" || (currentTheme === "system" && prefersDark);
-        
-        // Mantener el modo oscuro/claro actual usando setTheme
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-          // Asegurarse de que next-themes sepa que estamos en modo oscuro
-          setTheme('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          // Asegurarse de que next-themes sepa que estamos en modo claro
-          setTheme('light');
-        }
+        document.documentElement.classList.remove('dark');
+        // Asegurarse de que next-themes sepa que estamos en modo claro
+        setTheme('light');
       }
     } else {
       // Para temas estándar (light/dark/system), usar next-themes
@@ -164,36 +158,16 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   useEffect(() => {
     setMounted(true);
     
-    // Restaurar el tema personalizado si existe en localStorage o establecer twitter por defecto
+    // Restaurar el tema personalizado si existe en localStorage
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('selected-theme');
       if (savedTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
         setCustomTheme(savedTheme);
+        applyTheme(savedTheme);
       } else {
-        // Establecer twitter como predeterminado si no hay tema guardado
-        setCustomTheme('twitter');
-        applyTheme('twitter');
+        // Si no hay tema personalizado guardado, usar el tema estándar del sistema
+        setCustomTheme(null);
       }
-    }
-  }, [applyTheme]);
-
-  // Asegurarse de que el componente solo se renderice en el cliente
-  useEffect(() => {
-    setMounted(true);
-    
-    // Restaurar el tema seleccionado al cargar la página
-    const savedTheme = localStorage.getItem('selected-theme');
-    if (savedTheme) {
-      applyTheme(savedTheme);
-      
-      // Si es un tema personalizado, actualizar el estado
-      if (savedTheme !== "light" && savedTheme !== "dark" && savedTheme !== "system") {
-        setCustomTheme(savedTheme);
-      }
-    } else {
-      // Si no hay tema guardado, aplicar twitter como predeterminado
-      applyTheme("twitter");
-      setCustomTheme("twitter");
     }
   }, [applyTheme]);
 

@@ -9,7 +9,7 @@ import { LANGUAGE_OPTIONS } from '@/lib/constants/languages'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 
-import { AlertCircle, CheckCircle, Clock, HelpCircle, Loader2, Send, Sparkles, XCircle, PenTool, MessageSquare } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, HelpCircle, Loader2, Send, Sparkles, XCircle, PenTool, MessageSquare, Maximize2, Minimize2, Eye } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import ThemeToggle from '@/components/theme/ThemeToggle'
@@ -58,6 +58,7 @@ import { useThemeManagement } from '../hooks/useThemeManagement';
 import { usePageVisibility } from '../hooks/usePageVisibility';
 import { useFocusRedirect } from '../hooks/useFocusRedirect';
 import { useTabSwitchCounter } from '../hooks/useTabSwitchCounter';
+import { useEvaluationCounter } from '../hooks/useEvaluationCounter';
 import { EvaluationTimer } from '../components/EvaluationTimer';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { QuestionNavigator } from '../components/QuestionNavigator';
@@ -67,6 +68,7 @@ import { CodeEditor } from './components/code-editor';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiKeyButton } from './components/ApiKeyButton';
 import { TabSwitchCounter } from './components/TabSwitchCounter';
+import { EvaluationCounter } from './components/EvaluationCounter';
 
 export default function StudentEvaluationPage() {
   return (
@@ -101,6 +103,8 @@ function EvaluationContent() {
   const [isEvaluationExpired, setIsEvaluationExpired] = useState(false);
   const [isPageHidden, setIsPageHidden] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isResponseExpanded, setIsResponseExpanded] = useState(false);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   // Variables de estado para pestañas eliminadas - solo modo columnas;
   const [lastFeedback, setLastFeedback] = useState<{[questionId: number]: {success: boolean; message: string; details?: string; grade?: number}} | null>(null);
 
@@ -151,6 +155,9 @@ function EvaluationContent() {
       console.log(`[Tab Switch Counter] Cambios de pestaña: ${count}`);
     }
   });
+
+  // Usar el hook para manejar el contador de evaluaciones
+  const { evaluationCount, incrementCounter } = useEvaluationCounter(email || '');
 
   // Refs for state values needed in event handlers to avoid dependency loops
   const currentAnswerRef = useRef<Answer | null>(null);
@@ -375,6 +382,16 @@ function EvaluationContent() {
     }
   }, [evaluation, currentQuestionIndex, lastFeedback])
 
+  // Función para alternar el modo expandido del área de respuesta
+  const toggleResponseExpanded = () => {
+    setIsResponseExpanded(!isResponseExpanded);
+  };
+
+  // Función para abrir/cerrar el modal de la pregunta
+  const toggleQuestionModal = () => {
+    setIsQuestionModalOpen(!isQuestionModalOpen);
+  };
+
 
 
   // Enviar la evaluación completa
@@ -466,6 +483,9 @@ function EvaluationContent() {
           apiKey
         )
 
+        // Incrementar el contador de evaluaciones después de una llamada exitosa a la API
+        incrementCounter()
+
         // Actualizar el estado de la respuesta
         const updatedAnswers = [...answers]
         updatedAnswers[currentQuestionIndex].evaluated = true
@@ -518,6 +538,9 @@ function EvaluationContent() {
           currentQuestion.text,
           apiKey
         )
+
+        // Incrementar el contador de evaluaciones después de una llamada exitosa a la API
+        incrementCounter()
 
         // Actualizar el estado de la respuesta
         const updatedAnswers = [...answers]
@@ -785,48 +808,49 @@ function EvaluationContent() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background overflow-hidden" style={{ zIndex: 1, position: 'relative' }}>
-      {/* Barra superior con información y controles */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-2 bg-card shadow-md flex-shrink-0 border-b gap-2 h-12">
-        <div className="flex items-center gap-3 w-full md:w-auto">             
-          {/* Separador */}
+      {/* Barra superior con información y controles - Mejorada distribución y responsividad */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center p-2 bg-card shadow-md flex-shrink-0 border-b gap-2 min-h-[3rem]">
+        
+        {/* SECCIÓN IZQUIERDA: Información de la evaluación */}
+        <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto lg:flex-1 lg:max-w-md">
           <div className="hidden sm:block h-5 border-l border-border/50"></div>
-          
-          {/* Información de la evaluación */}
-          <div className="overflow-hidden flex-grow">
-            <h1 className={`text-lg md:text-xl font-bold truncate transition-all duration-300 ${isPageHidden ? 'animate-pulse text-red-500 dark:text-red-400' : ''}`}>
+          <div className="overflow-hidden flex-grow min-w-0">
+            <h1 className={`text-sm sm:text-base lg:text-lg font-bold truncate transition-all duration-300 ${isPageHidden ? 'animate-pulse text-red-500 dark:text-red-400' : ''}`}>
               {isPageHidden ? '⚠️ ' : ''}{evaluation.title}
             </h1>
             <p className="text-xs text-muted-foreground truncate">{firstName} {lastName}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
-          {/* Contenedor principal para elementos informativos con altura uniforme */}
-          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
-            {/* Calificación calculada */}
-            {answers.some(a => a.evaluated) && (
-              <div className="flex items-center gap-1 h-7 bg-primary/10 px-2 rounded-md flex-grow md:flex-grow-0">
-                <Sparkles className="h-3 w-3 text-primary flex-shrink-0" />
-                <span className="font-semibold text-xs truncate">
-                  Calificación: {(answers.reduce((sum, a) => sum + (a.score || 0), 0) / evaluation.questions.length).toFixed(1)}/5.0
-                </span>
-              </div>
-            )}
+        {/* SECCIÓN CENTRAL: Indicadores de progreso */}
+        <div className="flex flex-wrap sm:flex-nowrap lg:flex-nowrap items-center justify-center gap-1 sm:gap-2 w-full lg:w-auto lg:flex-1 lg:max-w-lg">
+          {/* Calificación calculada */}
+          {answers.some(a => a.evaluated) && (
+            <div className="flex items-center gap-1 h-7 bg-primary/10 px-1 sm:px-2 rounded-md min-w-0">
+              <Sparkles className="h-3 w-3 text-primary flex-shrink-0" />
+              <span className="font-semibold text-xs truncate">
+                <span className="hidden sm:inline">Calificación: </span>
+                <span className="sm:hidden">Cal: </span>
+                {(answers.reduce((sum, a) => sum + (a.score || 0), 0) / evaluation.questions.length).toFixed(1)}/5.0
+              </span>
+            </div>
+          )}
 
-            {/* Indicador de progreso */}
-            <div className="flex items-center gap-1 h-7 bg-primary/10 px-2 rounded-md flex-grow md:flex-grow-0">
-              <ProgressIndicator answers={answers} />
-              <div className="flex flex-col w-full">
-                <div className="w-full md:w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-300 ease-in-out"
-                    style={{ width: `${Math.round((answers.filter(a => a.answer.trim().length > 0).length / answers.length) * 100)}%` }}
-                  ></div>
-                </div>
+          {/* Indicador de progreso */}
+          <div className="flex items-center gap-1 h-7 bg-primary/10 px-1 sm:px-2 rounded-md min-w-0 flex-shrink">
+            <ProgressIndicator answers={answers} />
+            <div className="flex flex-col w-full min-w-0">
+              <div className="w-full sm:w-16 lg:w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300 ease-in-out"
+                  style={{ width: `${Math.round((answers.filter(a => a.answer.trim().length > 0).length / answers.length) * 100)}%` }}
+                ></div>
               </div>
             </div>
+          </div>
 
-            {/* Temporizador - Con la misma altura que los otros elementos */}
+          {/* Temporizador */}
+          <div className="flex-shrink-0">
             <EvaluationTimer
               timeRemaining={timeRemaining}
               isTimeExpired={isTimeExpired}
@@ -834,53 +858,24 @@ function EvaluationContent() {
               variant="default"
               showProgressBar={true}
             />
-
-
           </div>
+        </div>
 
-          {/* Separador vertical en escritorio, horizontal en móvil */}
-          <div className="hidden md:block h-7 border-l mx-1"></div>
-          <div className="block md:hidden w-full border-t my-1"></div>
-
-          {/* Contenedor para botones con altura uniforme */}
-          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-            {/* Botón para alternar modo de vista eliminado - solo modo columnas */}
-
-            {/* Botón de alternancia Ayuda/Evaluación */}
-            {(evaluation?.helpUrl || currentQuestion.helpUrl) && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setIsHelpMode(!isHelpMode)}
-                className={cn(
-                  "h-7 px-2 text-xs font-medium shadow-md hover:shadow-lg transition-all duration-200",
-                  isHelpMode 
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white" 
-                    : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                )}
-                title={isHelpMode ? "Volver a la evaluación" : "Ver recursos de ayuda"}
-              >
-                {isHelpMode ? (
-                  <PenTool className="h-3 w-3" />
-                ) : (
-                  <HelpCircle className="h-3 w-3" />
-                )}
-                <span className="hidden sm:inline ml-1">
-                  {isHelpMode ? 'Evaluación' : 'Ayuda'}
-                </span>
-              </Button>
-            )}
-            
+        {/* SECCIÓN DERECHA: Botones de acción con ayuda al final */}
+        <div className="flex items-center gap-1 sm:gap-2 w-full lg:w-auto lg:flex-1 lg:max-w-md justify-between lg:justify-end">
+          
+          {/* Grupo de botones principales */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
             {/* Botón de enviar evaluación */}
             <Button
               size="sm"
               onClick={openSubmitDialog}
               disabled={loading}
-              className="gap-1 h-7 flex-grow md:flex-grow-0"
+              className="gap-1 h-7 text-xs"
             >
               <Send className="h-3 w-3" />
-              <span className="inline sm:hidden md:hidden lg:inline">{loading ? 'Enviando...' : 'Enviar'}</span>
-              <span className="hidden sm:inline md:inline lg:hidden">{loading ? '...' : 'Enviar'}</span>
+              <span className="hidden xs:inline sm:hidden lg:inline">{loading ? 'Enviando...' : 'Enviar'}</span>
+              <span className="xs:hidden sm:inline lg:hidden">{loading ? '...' : 'Env'}</span>
             </Button>
             
             <TooltipProvider>
@@ -900,6 +895,8 @@ function EvaluationContent() {
             
             <TabSwitchCounter count={tabSwitchCount} className="flex-shrink-0 h-7" />
             
+            <EvaluationCounter count={evaluationCount} className="flex-shrink-0 h-7" />
+            
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -908,6 +905,36 @@ function EvaluationContent() {
                 <TooltipContent className="text-xs">Cambiar tema</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </div>
+
+          {/* Separador y botón de ayuda al final */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <div className="hidden lg:block h-5 border-l border-border/50"></div>
+            
+            {/* Botón de ayuda - SIEMPRE AL FINAL */}
+            {(evaluation?.helpUrl || currentQuestion.helpUrl) && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => setIsHelpMode(!isHelpMode)}
+                className={cn(
+                  "h-7 px-1 sm:px-2 text-xs font-medium shadow-md hover:shadow-lg transition-all duration-200 flex-shrink-0",
+                  isHelpMode 
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white" 
+                    : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                )}
+                title={isHelpMode ? "Volver a la evaluación" : "Ver recursos de ayuda"}
+              >
+                {isHelpMode ? (
+                  <PenTool className="h-3 w-3" />
+                ) : (
+                  <HelpCircle className="h-3 w-3" />
+                )}
+                <span className="hidden sm:inline ml-1">
+                  {isHelpMode ? 'Evaluación' : 'Ayuda'}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -941,28 +968,30 @@ function EvaluationContent() {
            </div>
         </div>
       ) : (
-        // Modo Normal - Dos columnas: pregunta y respuesta
-        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 p-4 flex-1 overflow-hidden">
-          {/* Columna izquierda: Visualizador de Markdown */}
-          <Card className="flex flex-col overflow-hidden mb-2 lg:mb-0 flex-1">
-            <CardHeader className="py-2 px-4 flex-shrink-0">
-              <CardTitle className="flex justify-between items-center text-base">
-                <span>Pregunta {currentQuestionIndex + 1}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 text-xs rounded-full ${currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}`}>
-                    {currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'Código' : 'Texto'}
-                  </span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pt-2 px-4 pb-4 overflow-auto relative">
-              <MarkdownViewer 
-                content={currentQuestion.text} 
-              />
-            </CardContent>
-          </Card>
+        // Modo Normal - Dos columnas: pregunta y respuesta (o solo respuesta si está expandida)
+        <div className={`flex flex-col gap-4 p-4 flex-1 overflow-hidden ${isResponseExpanded ? '' : 'lg:grid lg:grid-cols-2'}`}>
+          {/* Columna izquierda: Visualizador de Markdown - Oculta cuando está expandida */}
+          {!isResponseExpanded && (
+            <Card className="flex flex-col overflow-hidden mb-2 lg:mb-0 flex-1">
+              <CardHeader className="py-2 px-4 flex-shrink-0">
+                <CardTitle className="flex justify-between items-center text-base">
+                  <span>Pregunta {currentQuestionIndex + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}`}>
+                      {currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'Código' : 'Texto'}
+                    </span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pt-2 px-4 pb-4 overflow-auto relative">
+                <MarkdownViewer 
+                  content={currentQuestion.text} 
+                />
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Columna derecha: Editor de respuesta */}
+          {/* Columna derecha: Editor de respuesta - Ocupa todo el ancho cuando está expandida */}
           <Card className="flex flex-col overflow-hidden flex-1">
             <CardHeader className="py-2 px-4 flex-shrink-0">
               <CardTitle className="flex flex-wrap sm:flex-nowrap justify-between items-center text-base gap-1 sm:gap-0">
@@ -973,6 +1002,47 @@ function EvaluationContent() {
                       {LANGUAGE_OPTIONS.find(opt => opt.value === language)?.label || language}
                     </span>
                   )}
+                  
+                  {/* Botón para ver pregunta cuando está expandida */}
+                  {isResponseExpanded && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={toggleQuestionModal}
+                            className="h-7 text-xs px-2"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Ver pregunta
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
+                  {/* Botón para expandir/colapsar área de respuesta */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={toggleResponseExpanded}
+                          className="h-7 text-xs px-2"
+                        >
+                          {isResponseExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isResponseExpanded ? 'Mostrar pregunta' : 'Expandir respuesta'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
                   {/* Botón para ver última retroalimentación */}
                   {lastFeedback?.[currentQuestion.id] && (
                     <TooltipProvider>
@@ -1129,57 +1199,390 @@ function EvaluationContent() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal para mostrar el resultado de la evaluación */}
-      {evaluationResult && (
-        <AlertDialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
-          <AlertDialogContent className="max-w-3xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl flex items-center gap-2">
-                {evaluationResult.grade !== undefined ? (
-                  evaluationResult.grade >= 4 ? (
-                    <CheckCircle className="h-6 w-6 text-emerald-500" />
-                  ) : evaluationResult.grade >= 3 ? (
-                    <AlertCircle className="h-6 w-6 text-amber-500" />
-                  ) : (
-                    <XCircle className="h-6 w-6 text-red-500" />
-                  )
-                ) : (
-                  evaluationResult.success ? (
-                    <CheckCircle className="h-6 w-6 text-emerald-500" />
-                  ) : (
-                    <AlertCircle className="h-6 w-6 text-amber-500" />
-                  )
-                )}
-                <span>
-                  Resultado de la evaluación
-                  {evaluationResult.grade !== undefined && (
-                    <span className={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${evaluationResult.grade >= 4 ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' :
-                      evaluationResult.grade >= 3 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' :
-                        'bg-red-500/20 text-red-700 dark:text-red-300'
+      {/* Modal rediseñado para mostrar el resultado de la evaluación */}
+      {evaluationResult && isResultModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop con efecto blur */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in-0 duration-300"
+            onClick={() => setIsResultModalOpen(false)}
+          />
+          
+          {/* Contenedor principal flotante - Más ancho que alto */}
+          <div className="relative w-full max-w-6xl max-h-[85vh] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            {/* Barra superior con gradiente */}
+            <div className="relative overflow-hidden rounded-t-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+              <div className="relative flex items-center justify-between p-6">
+                <div className="flex items-center gap-4">
+                  {/* Indicador de resultado con animación */}
+                  <div className={`relative w-14 h-14 rounded-xl flex items-center justify-center shadow-lg ${
+                    evaluationResult.grade !== undefined ? (
+                      evaluationResult.grade >= 4 ? 'bg-gradient-to-br from-emerald-500 to-green-600' :
+                      evaluationResult.grade >= 3 ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+                      'bg-gradient-to-br from-red-500 to-rose-600'
+                    ) : (
+                      evaluationResult.success ? 'bg-gradient-to-br from-emerald-500 to-green-600' :
+                      'bg-gradient-to-br from-amber-500 to-orange-600'
+                    )
+                  }`}>
+                    <div className="absolute inset-0 rounded-xl bg-white/20 animate-pulse" />
+                    {evaluationResult.grade !== undefined ? (
+                      evaluationResult.grade >= 4 ? (
+                        <CheckCircle className="h-8 w-8 text-white" />
+                      ) : evaluationResult.grade >= 3 ? (
+                        <AlertCircle className="h-8 w-8 text-white" />
+                      ) : (
+                        <XCircle className="h-8 w-8 text-white" />
+                      )
+                    ) : (
+                      evaluationResult.success ? (
+                        <CheckCircle className="h-8 w-8 text-white" />
+                      ) : (
+                        <AlertCircle className="h-8 w-8 text-white" />
+                      )
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      Resultado de la Evaluación
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        evaluationResult.grade !== undefined ? (
+                          evaluationResult.grade >= 4 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                          evaluationResult.grade >= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                        ) : (
+                          evaluationResult.success ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                          'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                        )
                       }`}>
-                      {evaluationResult.grade.toFixed(1)}/5.0
-                    </span>
-                  )}
-                </span>
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-xl font-medium mt-2">
-                {evaluationResult.message}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            {evaluationResult.details && (
-              <div className="my-4 max-h-[60vh] overflow-y-auto p-5 bg-muted/50 rounded-lg border">
-                <p className="text-lg whitespace-pre-wrap leading-relaxed">{evaluationResult.details}</p>
+                        {evaluationResult.grade !== undefined ? 'Calificado' : 'Evaluado'}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {evaluationResult.message}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Botón cerrar elegante */}
+                <button
+                  onClick={() => setIsResultModalOpen(false)}
+                  className="group relative w-10 h-10 rounded-xl bg-muted/50 hover:bg-destructive/10 border border-border/50 hover:border-destructive/30 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Cerrar resultado"
+                >
+                  <svg className="w-5 h-5 text-muted-foreground group-hover:text-destructive transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            )}
+            </div>
+            
+            {/* Contenido principal con layout horizontal */}
+            <div className="flex flex-col lg:flex-row gap-6 p-6 max-h-[65vh] overflow-hidden">
+              {/* Panel izquierdo: Nota destacada */}
+              <div className="lg:w-1/3 flex-shrink-0">
+                <div className="relative">
+                  {/* Decoración de fondo */}
+                  <div className="absolute top-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl" />
+                  <div className="absolute bottom-0 right-0 w-16 h-16 bg-secondary/5 rounded-full blur-xl" />
+                  
+                  {/* Contenedor de la nota */}
+                  <div className={`relative bg-gradient-to-br backdrop-blur-sm border rounded-2xl p-8 text-center shadow-lg ${
+                    evaluationResult.grade !== undefined ? (
+                      evaluationResult.grade >= 4 ? 'from-emerald-50/80 via-green-50/60 to-emerald-100/40 border-emerald-200/50 dark:from-emerald-950/40 dark:via-green-950/30 dark:to-emerald-900/20 dark:border-emerald-800/30' :
+                      evaluationResult.grade >= 3 ? 'from-amber-50/80 via-orange-50/60 to-amber-100/40 border-amber-200/50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-900/20 dark:border-amber-800/30' :
+                      'from-red-50/80 via-rose-50/60 to-red-100/40 border-red-200/50 dark:from-red-950/40 dark:via-rose-950/30 dark:to-red-900/20 dark:border-red-800/30'
+                    ) : 'from-blue-50/80 via-indigo-50/60 to-blue-100/40 border-blue-200/50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-900/20 dark:border-blue-800/30'
+                  }`}>
+                    {evaluationResult.grade !== undefined ? (
+                      <>
+                        <div className="mb-4">
+                          <div className={`text-6xl font-black mb-2 ${
+                            evaluationResult.grade >= 4 ? 'text-emerald-600 dark:text-emerald-400' :
+                            evaluationResult.grade >= 3 ? 'text-amber-600 dark:text-amber-400' :
+                            'text-red-600 dark:text-red-400'
+                          }`}>
+                            {evaluationResult.grade.toFixed(1)}
+                          </div>
+                          <div className="text-2xl font-semibold text-muted-foreground">
+                            / 5.0
+                          </div>
+                        </div>
+                        
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                          evaluationResult.grade >= 4 ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' :
+                          evaluationResult.grade >= 3 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' :
+                          'bg-red-500/20 text-red-700 dark:text-red-300'
+                        }`}>
+                          {evaluationResult.grade >= 4 ? (
+                            <>
+                              <Sparkles className="h-4 w-4" />
+                              ¡Excelente!
+                            </>
+                          ) : evaluationResult.grade >= 3 ? (
+                            <>
+                              <CheckCircle className="h-4 w-4" />
+                              Bien hecho
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-4 w-4" />
+                              Puede mejorar
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Barra de progreso visual */}
+                        <div className="mt-6">
+                          <div className="w-full h-3 bg-muted/30 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                                evaluationResult.grade >= 4 ? 'bg-gradient-to-r from-emerald-500 to-green-600' :
+                                evaluationResult.grade >= 3 ? 'bg-gradient-to-r from-amber-500 to-orange-600' :
+                                'bg-gradient-to-r from-red-500 to-rose-600'
+                              }`}
+                              style={{ width: `${(evaluationResult.grade / 5) * 100}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                            <span>0</span>
+                            <span>2.5</span>
+                            <span>5.0</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                          evaluationResult.success ? 'bg-emerald-500/20' : 'bg-amber-500/20'
+                        }`}>
+                          {evaluationResult.success ? (
+                            <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                          )}
+                        </div>
+                        <div className="text-xl font-semibold">
+                          {evaluationResult.success ? 'Respuesta Correcta' : 'Respuesta Evaluada'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Panel derecho: Retroalimentación */}
+              <div className="lg:w-2/3 flex-1 min-w-0">
+                <div className="relative h-full">
+                  {/* Decoración de fondo */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary/5 rounded-full blur-2xl" />
+                  
+                  {/* Contenedor de retroalimentación */}
+                  <div className="relative bg-gradient-to-br from-muted/30 via-background/50 to-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm flex flex-col h-full">
+                    {/* Header fijo */}
+                    <div className="flex items-center gap-3 p-6 pb-4 flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-lg font-semibold">Retroalimentación Detallada</h3>
+                    </div>
+                    
+                    {/* Contenido con scroll */}
+                    <div className="flex-1 px-6 pb-6 min-h-0">
+                      {evaluationResult.details ? (
+                        <div className="h-full overflow-y-auto overflow-x-hidden pr-2 -mr-2">
+                          {/* Scrollbar personalizada */}
+                          <style jsx>{`
+                            div::-webkit-scrollbar {
+                              width: 8px;
+                            }
+                            div::-webkit-scrollbar-track {
+                              background: transparent;
+                              border-radius: 4px;
+                            }
+                            div::-webkit-scrollbar-thumb {
+                              background: hsl(var(--muted-foreground) / 0.3);
+                              border-radius: 4px;
+                              border: 2px solid transparent;
+                              background-clip: content-box;
+                            }
+                            div::-webkit-scrollbar-thumb:hover {
+                              background: hsl(var(--muted-foreground) / 0.5);
+                              background-clip: content-box;
+                            }
+                          `}</style>
+                          
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="text-base leading-relaxed whitespace-pre-wrap text-foreground break-words">
+                              {evaluationResult.details}
+                            </div>
+                          </div>
+                          
+                          {/* Indicador de scroll si el contenido es largo */}
+                          {evaluationResult.details.length > 500 && (
+                            <div className="mt-4 pt-4 border-t border-border/20 text-center">
+                              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                                <div className="w-1 h-1 bg-current rounded-full animate-pulse" />
+                                Desplázate para ver más contenido
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <div className="text-center">
+                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No hay retroalimentación adicional disponible</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Barra inferior con acciones */}
+            <div className="flex items-center justify-between p-6 border-t border-border/30 bg-muted/20 rounded-b-2xl">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Evaluación completada
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="text-sm text-muted-foreground">
+                  {new Date().toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setIsResultModalOpen(false)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
+                >
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <AlertDialogFooter className="gap-2">
-              <AlertDialogAction onClick={() => setIsResultModalOpen(false)} className="w-full sm:w-auto">
-                Cerrar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      {/* Modal mejorado para mostrar la pregunta en modo expandido */}
+      {isQuestionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop con efecto blur */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in-0 duration-300"
+            onClick={() => setIsQuestionModalOpen(false)}
+          />
+          
+          {/* Contenedor principal flotante */}
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            {/* Barra superior con gradiente */}
+            <div className="relative overflow-hidden rounded-t-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+              <div className="relative flex items-center justify-between p-6">
+                <div className="flex items-center gap-4">
+                  {/* Indicador de tipo con animación */}
+                  <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center ${
+                    currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' 
+                      ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
+                      : 'bg-gradient-to-br from-green-500 to-teal-600'
+                  } shadow-lg`}>
+                    <div className="absolute inset-0 rounded-xl bg-white/20 animate-pulse" />
+                    {currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? (
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                    ) : (
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      Pregunta {currentQuestionIndex + 1}
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        currentQuestion.type && currentQuestion.type.toLowerCase() === 'code'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                      }`}>
+                        {currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'Código' : 'Texto'}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {currentQuestionIndex + 1} de {evaluation.questions.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Botón cerrar elegante */}
+                <button
+                  onClick={() => setIsQuestionModalOpen(false)}
+                  className="group relative w-10 h-10 rounded-xl bg-muted/50 hover:bg-destructive/10 border border-border/50 hover:border-destructive/30 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Cerrar vista previa"
+                >
+                  <svg className="w-5 h-5 text-muted-foreground group-hover:text-destructive transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Contenido principal con scroll personalizado */}
+            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <div className="relative">
+                {/* Decoración de fondo */}
+                <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-secondary/5 rounded-full blur-2xl" />
+                
+                {/* Contenedor del contenido */}
+                <div className="relative bg-gradient-to-br from-muted/30 via-background/50 to-muted/20 border border-border/30 rounded-xl p-8 min-h-[300px] backdrop-blur-sm">
+                  <MarkdownViewer content={currentQuestion.text} />
+                </div>
+              </div>
+            </div>
+            
+            {/* Barra inferior con información */}
+            <div className="flex items-center justify-between p-6 border-t border-border/30 bg-muted/20 rounded-b-2xl">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Pregunta ID: {currentQuestion.id}
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="text-sm text-muted-foreground">
+                  Tipo: {currentQuestion.type && currentQuestion.type.toLowerCase() === 'code' ? 'Código' : 'Texto'}
+                </div>
+                {currentQuestion.language && (
+                  <>
+                    <div className="w-px h-4 bg-border" />
+                    <div className="text-sm text-muted-foreground">
+                      Lenguaje: {currentQuestion.language}
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${
+                  answers.find(a => a.questionId === currentQuestion.id)?.answer.trim() ? 'bg-green-500' : 'bg-yellow-500'
+                }`} />
+                <span className="text-sm font-medium">
+                  {answers.find(a => a.questionId === currentQuestion.id)?.answer.trim() ? 'Respondida' : 'Pendiente'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
