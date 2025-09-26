@@ -69,6 +69,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ApiKeyButton } from './components/ApiKeyButton';
 import { TabSwitchCounter } from './components/TabSwitchCounter';
 import { EvaluationCounter } from './components/EvaluationCounter';
+import { PunishmentModal } from './components/PunishmentModal';
 
 export default function StudentEvaluationPage() {
   return (
@@ -105,6 +106,8 @@ function EvaluationContent() {
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [isPunishmentModalOpen, setIsPunishmentModalOpen] = useState(false);
+  const [punishmentTabSwitchCount, setPunishmentTabSwitchCount] = useState(0);
   // Variables de estado para pestañas eliminadas - solo modo columnas;
   const [lastFeedback, setLastFeedback] = useState<{[questionId: number]: {success: boolean; message: string; details?: string; grade?: number}} | null>(null);
 
@@ -153,11 +156,43 @@ function EvaluationContent() {
     enabled: true,
     onTabSwitch: (count) => {
       console.log(`[Tab Switch Counter] Cambios de pestaña: ${count}`);
+    },
+    onPunishmentTrigger: (count) => {
+      console.warn(`[Security Pause] Activando pausa de seguridad por ${count} cambios de pestaña`);
+      setPunishmentTabSwitchCount(count);
+      setIsPunishmentModalOpen(true);
     }
   });
 
   // Usar el hook para manejar el contador de evaluaciones
   const { evaluationCount, incrementCounter } = useEvaluationCounter(email || '');
+
+  // Detectar estado de pausa persistente al cargar la página
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const savedState = localStorage.getItem('securityPauseState')
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState)
+        const now = Date.now()
+        const elapsed = Math.floor((now - state.startTime) / 1000)
+        const remainingTime = Math.max(0, 30 - elapsed)
+
+        if (state.isActive && remainingTime > 0) {
+          // Hay una pausa activa, restaurar el modal
+          setPunishmentTabSwitchCount(state.tabSwitchCount)
+          setIsPunishmentModalOpen(true)
+        } else if (state.isActive && remainingTime <= 0) {
+          // La pausa ya expiró, limpiar estado
+          localStorage.removeItem('securityPauseState')
+        }
+      } catch (error) {
+        console.error('Error al restaurar estado de pausa:', error)
+        localStorage.removeItem('securityPauseState')
+      }
+    }
+  }, [])
 
   // Refs for state values needed in event handlers to avoid dependency loops
   const currentAnswerRef = useRef<Answer | null>(null);
@@ -381,6 +416,12 @@ function EvaluationContent() {
       setIsResultModalOpen(true)
     }
   }, [evaluation, currentQuestionIndex, lastFeedback])
+
+  // Función para manejar cuando se complete la pausa de seguridad
+  const handlePunishmentComplete = useCallback(() => {
+    setIsPunishmentModalOpen(false);
+    setPunishmentTabSwitchCount(0);
+  }, []);
 
   // Función para alternar el modo expandido del área de respuesta
   const toggleResponseExpanded = () => {
@@ -1584,6 +1625,13 @@ function EvaluationContent() {
           </div>
         </div>
       )}
+
+      {/* Modal de pausa de seguridad por cambio de pestañas */}
+      <PunishmentModal
+        isOpen={isPunishmentModalOpen}
+        tabSwitchCount={punishmentTabSwitchCount}
+        onComplete={handlePunishmentComplete}
+      />
     </div>
   )
 }

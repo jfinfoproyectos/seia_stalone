@@ -3,20 +3,27 @@ import { useEffect, useRef, useState } from 'react';
 interface UseTabSwitchCounterProps {
   enabled?: boolean;
   onTabSwitch?: (count: number) => void;
+  onPunishmentTrigger?: (count: number) => void; // Callback para activar el modal de pausa de seguridad
 }
 
 export function useTabSwitchCounter({
   enabled = true,
-  onTabSwitch
+  onTabSwitch,
+  onPunishmentTrigger
 }: UseTabSwitchCounterProps = {}) {
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const onTabSwitchRef = useRef(onTabSwitch);
+  const onPunishmentTriggerRef = useRef(onPunishmentTrigger);
   const isInitializedRef = useRef(false);
 
-  // Actualizar referencia cuando cambie la función
+  // Actualizar referencias cuando cambien las funciones
   useEffect(() => {
     onTabSwitchRef.current = onTabSwitch;
   }, [onTabSwitch]);
+
+  useEffect(() => {
+    onPunishmentTriggerRef.current = onPunishmentTrigger;
+  }, [onPunishmentTrigger]);
 
   // Cargar contador desde localStorage al inicializar
   useEffect(() => {
@@ -57,6 +64,14 @@ export function useTabSwitchCounter({
           // Llamar callback si existe
           if (onTabSwitchRef.current) {
             onTabSwitchRef.current(newCount);
+          }
+
+          // Verificar si es múltiplo de 3 para activar la pausa de seguridad
+          if (newCount > 0 && newCount % 3 === 0) {
+            console.warn(`[Tab Switch] ¡Pausa de seguridad activada! ${newCount} cambios de pestaña detectados`);
+            if (onPunishmentTriggerRef.current) {
+              onPunishmentTriggerRef.current(newCount);
+            }
           }
 
           console.info(`[Tab Switch] Cambio de pestaña detectado. Total: ${newCount}`);
