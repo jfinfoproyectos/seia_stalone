@@ -152,7 +152,7 @@ function EvaluationContent() {
     enabled: false // Deshabilitado para usar solo el contador
   });
 
-  // Usar el hook para contar cambios de pestaña sin redirigir
+  // Usar el hook para contar cambios de pestaña - modal cada 5 cambios
   useTabSwitchCounter({
     enabled: true,
     onTabSwitch: (count) => {
@@ -162,14 +162,6 @@ function EvaluationContent() {
       console.warn(`[Security Pause] Activando pausa de seguridad por ${count} cambios de pestaña`);
       setPunishmentTabSwitchCount(count);
       setIsPunishmentModalOpen(true);
-    },
-    onRedirect: (count) => {
-      console.warn(`[Security] Límite de cambios de pestaña excedido (${count}) - redirigiendo a página de entrada`);
-      // Limpiar datos de la sesión actual
-      localStorage.removeItem('securityPauseState');
-      localStorage.removeItem('tabSwitchCount');
-      // Redirigir a la página de entrada del estudiante
-      router.push('/student');
     }
   });
 

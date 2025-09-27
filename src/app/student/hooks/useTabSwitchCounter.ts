@@ -3,20 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 interface UseTabSwitchCounterProps {
   enabled?: boolean;
   onTabSwitch?: (count: number) => void;
-  onPunishmentTrigger?: (count: number) => void; // Callback para activar el modal de pausa de seguridad
-  onRedirect?: (count: number) => void; // Callback para redirigir después de 20 detecciones
+  onPunishmentTrigger?: (count: number) => void; // Callback para activar el modal de pausa de seguridad cada 5 cambios
 }
 
 export function useTabSwitchCounter({
   enabled = true,
   onTabSwitch,
-  onPunishmentTrigger,
-  onRedirect
+  onPunishmentTrigger
 }: UseTabSwitchCounterProps = {}) {
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const onTabSwitchRef = useRef(onTabSwitch);
   const onPunishmentTriggerRef = useRef(onPunishmentTrigger);
-  const onRedirectRef = useRef(onRedirect);
   const isInitializedRef = useRef(false);
 
   // Actualizar referencias cuando cambien las funciones
@@ -27,10 +24,6 @@ export function useTabSwitchCounter({
   useEffect(() => {
     onPunishmentTriggerRef.current = onPunishmentTrigger;
   }, [onPunishmentTrigger]);
-
-  useEffect(() => {
-    onRedirectRef.current = onRedirect;
-  }, [onRedirect]);
 
   // Cargar contador desde localStorage al inicializar
   useEffect(() => {
@@ -73,20 +66,8 @@ export function useTabSwitchCounter({
             onTabSwitchRef.current(newCount);
           }
 
-          // Implementar las nuevas reglas de detección
-          if (newCount > 20) {
-            // Después de 20 detecciones, redirigir en cada detección adicional
-            if (onRedirectRef.current) {
-              onRedirectRef.current(newCount);
-            }
-          } else if (newCount > 12) {
-            // Después de 12 detecciones, activar modal en cada detección adicional
-            console.warn(`[Tab Switch] ¡Pausa de seguridad activada! ${newCount} cambios de pestaña detectados`);
-            if (onPunishmentTriggerRef.current) {
-              onPunishmentTriggerRef.current(newCount);
-            }
-          } else if (newCount % 3 === 0) {
-            // Hasta 12 detecciones, mostrar mensaje cada 3 detecciones
+          // Activar modal de pausa de seguridad cada 5 cambios de pestaña
+          if (newCount % 5 === 0) {
             console.warn(`[Tab Switch] ¡Pausa de seguridad activada! ${newCount} cambios de pestaña detectados`);
             if (onPunishmentTriggerRef.current) {
               onPunishmentTriggerRef.current(newCount);
