@@ -44,6 +44,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "devtools-detector": "^2.0.25",
     "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",

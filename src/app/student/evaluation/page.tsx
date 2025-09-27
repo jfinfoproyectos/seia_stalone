@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { getAIFeedback } from '@/lib/gemini-code-evaluation';
 import { evaluateTextResponse } from '@/lib/gemini-text-evaluation';
 import { useApiKeyRequired } from '@/components/ui/api-key-guard';
+import { removeApiKeyFromStorage } from '@/lib/apiKeyService';
 
 // Tipos para los modelos de datos
 type Question = {
@@ -59,6 +60,7 @@ import { usePageVisibility } from '../hooks/usePageVisibility';
 import { useFocusRedirect } from '../hooks/useFocusRedirect';
 import { useTabSwitchCounter } from '../hooks/useTabSwitchCounter';
 import { useEvaluationCounter } from '../hooks/useEvaluationCounter';
+import { useDevToolsDetector } from '../hooks/useDevToolsDetector';
 import { EvaluationTimer } from '../components/EvaluationTimer';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { QuestionNavigator } from '../components/QuestionNavigator';
@@ -67,7 +69,6 @@ import { MarkdownViewer } from './components/markdown-viewer';
 import { CodeEditor } from './components/code-editor';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiKeyButton } from './components/ApiKeyButton';
-import { TabSwitchCounter } from './components/TabSwitchCounter';
 import { EvaluationCounter } from './components/EvaluationCounter';
 import { PunishmentModal } from './components/PunishmentModal';
 
@@ -152,7 +153,7 @@ function EvaluationContent() {
   });
 
   // Usar el hook para contar cambios de pestaña sin redirigir
-  const { tabSwitchCount } = useTabSwitchCounter({
+  useTabSwitchCounter({
     enabled: true,
     onTabSwitch: (count) => {
       console.log(`[Tab Switch Counter] Cambios de pestaña: ${count}`);
@@ -161,11 +162,31 @@ function EvaluationContent() {
       console.warn(`[Security Pause] Activando pausa de seguridad por ${count} cambios de pestaña`);
       setPunishmentTabSwitchCount(count);
       setIsPunishmentModalOpen(true);
+    },
+    onRedirect: (count) => {
+      console.warn(`[Security] Límite de cambios de pestaña excedido (${count}) - redirigiendo a página de entrada`);
+      // Limpiar datos de la sesión actual
+      localStorage.removeItem('securityPauseState');
+      localStorage.removeItem('tabSwitchCount');
+      // Redirigir a la página de entrada del estudiante
+      router.push('/student');
     }
   });
 
   // Usar el hook para manejar el contador de evaluaciones
   const { evaluationCount, incrementCounter } = useEvaluationCounter(email || '');
+
+  // Detectar DevTools y redirigir si se abren
+  useDevToolsDetector({
+    enabled: true,
+    onDevToolsOpen: () => {
+      console.warn('[Security] DevTools detectadas - redirigiendo a página de entrada');
+      // Limpiar datos de la sesión actual
+      localStorage.removeItem('securityPauseState');
+      // Redirigir a la página de entrada del estudiante
+      router.push('/student');
+    }
+  });
 
   // Detectar estado de pausa persistente al cargar la página
   useEffect(() => {
@@ -252,6 +273,14 @@ function EvaluationContent() {
     // Esperar a que los datos del estudiante se carguen
     if (!isDataLoaded) {
       return;
+    }
+
+    // Borrar la API key de Gemini cada vez que el estudiante ingrese a la evaluación
+    try {
+      removeApiKeyFromStorage();
+      console.log('[Security] API key de Gemini eliminada al ingresar a la evaluación');
+    } catch (error) {
+      console.error('[Security] Error al eliminar API key de Gemini:', error);
     }
 
     if (!uniqueCode || !email || !firstName || !lastName) {
@@ -933,8 +962,6 @@ function EvaluationContent() {
               isOpen={isApiKeyDialogOpen}
               onOpenChange={setIsApiKeyDialogOpen}
             />
-            
-            <TabSwitchCounter count={tabSwitchCount} className="flex-shrink-0 h-7" />
             
             <EvaluationCounter count={evaluationCount} className="flex-shrink-0 h-7" />
             

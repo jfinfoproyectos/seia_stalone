@@ -50,7 +50,7 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
       }
     }
     setIsInitialized(true)
-  }, [])
+  }, [isInitialized])
 
   // Guardar estado cuando se abre el modal
   useEffect(() => {
@@ -99,10 +99,7 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
           setIsCompleted(true)
           // Limpiar estado de localStorage
           localStorage.removeItem('securityPauseState')
-          // Auto-cerrar el modal cuando termine el tiempo
-          setTimeout(() => {
-            onComplete()
-          }, 1000) // Esperar 1 segundo para mostrar el botón antes de cerrar
+          // No cerrar automáticamente, solo mostrar el botón
           return 0
         }
         return newTimeLeft
@@ -122,14 +119,14 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop con efecto blur */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in-0 duration-300" />
+      {/* Backdrop con efecto blur mejorado */}
+      <div className="absolute inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm animate-in fade-in-0 duration-300" />
       
-      {/* Contenedor principal flotante */}
-      <div className="relative w-full max-w-5xl max-h-[85vh] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-        {/* Barra superior con gradiente */}
+      {/* Contenedor principal flotante con mejor contraste */}
+      <div className="relative w-full max-w-5xl max-h-[85vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        {/* Barra superior con gradiente mejorado */}
         <div className="relative overflow-hidden rounded-t-2xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-orange-500/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-orange-500/20 dark:from-orange-600/30 dark:via-red-600/30 dark:to-orange-600/30" />
           <div className="relative flex items-center justify-between p-6">
             <div className="flex items-center gap-4">
               {/* Indicador de seguridad con animación */}
@@ -139,11 +136,11 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
               </div>
               
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   Pausa de Seguridad Activada
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200">
                     Protocolo de Integridad
                   </span>
                 </div>
@@ -152,11 +149,11 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
 
             {/* Contador principal */}
             <div className="text-right">
-              <div className="text-3xl font-bold text-orange-600">
+              <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                 {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:
                 {String(timeLeft % 60).padStart(2, '0')}
               </div>
-              <p className="text-sm text-muted-foreground">Tiempo de Espera</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Tiempo de Espera</p>
             </div>
           </div>
         </div>
@@ -184,22 +181,27 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-3 mb-3">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                    <h4 className="font-semibold text-sm">Política de Integridad</h4>
+                    <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Política de Integridad</h4>
                   </div>
-                  <p className="text-muted-foreground text-sm">
-                    Evite cambiar de pestaña durante la evaluación. Cada 3 cambios activarán esta pausa de seguridad.
-                  </p>
+                  <div className="text-gray-600 dark:text-gray-300 text-sm space-y-2">
+                    <p>Evite cambiar de pestaña durante la evaluación:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Cada 3 cambios: Pausa de seguridad (hasta 12 detecciones)</li>
+                      <li>Más de 12 cambios: Pausa en cada detección adicional</li>
+                      <li>Más de 20 cambios: Redirección automática al inicio</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                   <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">
-                    Reanudación Automática
+                    Reanudación Manual
                   </h4>
                   <p className="text-blue-700 dark:text-blue-300 text-sm">
-                    La evaluación se reanudará automáticamente. Esta ventana no puede cerrarse manualmente.
+                    Cuando termine el tiempo, podrá continuar presionando el botón &quot;Continuar Evaluación&quot;.
                   </p>
                 </div>
               </div>
@@ -217,7 +219,7 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
                     stroke="currentColor"
                     strokeWidth="3"
                     fill="none"
-                    className="text-muted-foreground/20"
+                    className="text-gray-300 dark:text-gray-600"
                   />
                   <circle
                     cx="50"
@@ -228,27 +230,27 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 45}`}
                     strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
-                    className="text-orange-600 transition-all duration-1000 ease-out"
+                    className="text-orange-600 dark:text-orange-400 transition-all duration-1000 ease-out"
                     strokeLinecap="round"
                   />
                 </svg>
                 
                 {/* Contenido central del círculo */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <Timer className="w-6 h-6 text-orange-600 mb-1" />
+                  <Timer className="w-6 h-6 text-orange-600 dark:text-orange-400 mb-1" />
                   <div className="text-center">
-                    <div className="text-xl font-bold text-foreground">
+                    <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
                       {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    {/* <p className="text-xs text-gray-600 dark:text-gray-400">
                       minutos:segundos
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               </div>
 
               <div className="text-center w-full">
-                <div className="text-xl font-bold text-orange-600 mb-2">
+                <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-2">
                   {Math.round(progress)}%
                 </div>
                 <Progress value={progress} className="w-full h-2" />
