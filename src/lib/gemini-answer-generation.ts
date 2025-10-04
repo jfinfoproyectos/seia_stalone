@@ -13,7 +13,7 @@ export async function generateAnswer(question: string, language?: string, apiKey
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
     const prompt = [
       "Responde exactamente lo que se pregunta, sin explicaciones ni justificaciones. Si es código, solo muestra el bloque de código necesario.",
       "No uses ningún formato markdown, ni bloques de código markdown, ni comillas triples, ni etiquetas especiales. No envuelvas el código en ningún delimitador de bloque (como ``` o ~~~) ni uses etiquetas de lenguaje. Solo texto plano o código puro.",

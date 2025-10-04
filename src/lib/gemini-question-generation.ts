@@ -23,7 +23,7 @@ export async function generateQuestion(
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     // Instrucciones específicas según tipo y subtipo
     let typeInstruction = '';

@@ -240,7 +240,7 @@ export async function evaluateGitHubActivity(
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     const prompt = `
     Eres un evaluador experto de actividades de programación en GitHub. Evalúa el siguiente repositorio de un estudiante.
@@ -256,10 +256,9 @@ export async function evaluateGitHubActivity(
 
     Evalúa el repositorio según estos criterios (escala 0-5):
     1. COMPLETENESS (0-5): ¿Está completa la actividad según la descripción?
-    2. CODE_QUALITY (0-5): Calidad del código (estructura, legibilidad, organización)
-    3. DOCUMENTATION (0-5): Documentación, comentarios y README
-    4. FUNCTIONALITY (0-5): ¿El código parece funcional y correcto?
-    5. BEST_PRACTICES (0-5): Buenas prácticas de programación
+    2. CODE_QUALITY (0-5): Calidad del código (estructura, legibilidad, organización)   
+    3. FUNCTIONALITY (0-5): ¿El código parece funcional y correcto?
+    
 
     Proporciona también:
     - Un resumen breve de la evaluación (2-3 líneas)

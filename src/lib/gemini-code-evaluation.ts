@@ -103,7 +103,7 @@ export async function getAIFeedback(
     const genAI = new GoogleGenAI({ apiKey });
     
     // Usar el modelo gemini-2.0-flash 
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     // Crear el prompt para la evaluación
     const prompt = `

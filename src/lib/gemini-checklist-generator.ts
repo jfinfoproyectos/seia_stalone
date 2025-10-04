@@ -20,7 +20,7 @@ export async function generateChecklistWithGemini({ instructions, language = 'es
       throw new Error('API Key de Gemini es requerida');
     }
   const ai = new GoogleGenAI({ apiKey });
-  const model = 'gemini-1.5-flash';
+  const model = 'gemini-2.5-flash';
   let prompt = '';
   if (language === 'en') {
     prompt = `Generate an educational checklist based on the following instructions. The output must be in the following plain text format (do not use Markdown):\nTitle: [Generated title here]\nDescription: [Generated description here]\nCriteria:\n- [Criterion 1]\n- [Criterion 2]\n... and so on.\n\nInstructions: ${instructions}`;

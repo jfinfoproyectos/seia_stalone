@@ -45,7 +45,7 @@ export async function generateOptimizedPrompt(
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     // Mapeo de tipos de prompt a descripciones
     const promptTypeDescriptions: Record<string, string> = {

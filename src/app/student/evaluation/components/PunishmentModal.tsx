@@ -173,8 +173,9 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
                       {tabSwitchCount} cambios de pestaña detectados
                     </h3>
                     <p className="text-orange-700 dark:text-orange-300 text-sm leading-relaxed">
-                      Por motivos de seguridad académica, se ha activado una pausa temporal. 
-                      Esta medida garantiza la integridad del proceso de evaluación.
+                      Se ha detectado actividad de cambio de pestaña durante la evaluación. 
+                      Por motivos de seguridad académica, se activa una pausa temporal cada 5 cambios de pestaña 
+                      para garantizar la integridad del proceso de evaluación.
                     </p>
                   </div>
                 </div>
@@ -187,21 +188,21 @@ export function PunishmentModal({ isOpen, tabSwitchCount, onComplete }: Security
                     <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Política de Integridad</h4>
                   </div>
                   <div className="text-gray-600 dark:text-gray-300 text-sm space-y-2">
-                    <p>Evite cambiar de pestaña durante la evaluación:</p>
+                    <p>Política de seguridad para cambios de pestaña:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li>Cada 3 cambios: Pausa de seguridad (hasta 12 detecciones)</li>
-                      <li>Más de 12 cambios: Pausa en cada detección adicional</li>
-                      <li>Más de 20 cambios: Redirección automática al inicio</li>
+                      <li>Cada 5 cambios de pestaña: Pausa de seguridad de 30 segundos</li>
+                      <li>Mantenga el foco en la evaluación para evitar interrupciones</li>
+                      <li>La pausa garantiza la integridad académica del proceso</li>
                     </ul>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                   <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">
-                    Reanudación Manual
+                    Reanudación de la Evaluación
                   </h4>
                   <p className="text-blue-700 dark:text-blue-300 text-sm">
-                    Cuando termine el tiempo, podrá continuar presionando el botón &quot;Continuar Evaluación&quot;.
+                    Espere 30 segundos para continuar. Evite cambiar de pestaña para prevenir futuras pausas de seguridad.
                   </p>
                 </div>
               </div>

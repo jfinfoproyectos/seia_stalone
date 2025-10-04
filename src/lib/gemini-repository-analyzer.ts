@@ -332,7 +332,7 @@ ${selectedDirectories.map(d => `- ${d.path}/`).join('\n')}`;
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     const prompt = `
 Eres un experto analista de código y repositorios de software. Analiza los elementos seleccionados del siguiente repositorio según el prompt personalizado proporcionado.
