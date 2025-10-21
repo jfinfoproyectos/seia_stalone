@@ -11,6 +11,7 @@ import { useStudentData } from './hooks/useStudentData'
 import { useThemeManagement } from './hooks/useThemeManagement'
 
 
+
 export default function StudentEntryPage() {
   const [uniqueCode, setUniqueCode] = useState('')
   const [loading, setLoading] = useState(false)
