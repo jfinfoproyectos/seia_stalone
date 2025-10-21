@@ -33,7 +33,7 @@ export async function evaluateTextResponse(
     const genAI = new GoogleGenAI({ apiKey });
 
     // Usar el modelo gemini-2.0-flash para evaluaciones más rápidas
-    const model = "gemini-2.5-flash";
+    const model = "gemini-2.5-flash-lite";
 
     // Crear el prompt para la evaluación
     const prompt = `

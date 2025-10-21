@@ -31,6 +31,8 @@ export const MarkdownViewer = ({ content }: MarkdownViewerProps) => {
       <div className="h-full w-full border border-input rounded-md bg-transparent shadow-xs overflow-hidden">
         <MDPreview
           source={content}
+          // Desactivar el botón de copiar código en bloques Markdown
+          disableCopy={true}
           style={{
             ...getMarkdownStyles(),
             overflowY: 'auto',

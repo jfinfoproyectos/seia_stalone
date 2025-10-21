@@ -22,35 +22,8 @@ export default function LoginPage() {
   // Asegurar que el componente esté montado y el tema cargado
   useEffect(() => {
     setMounted(true);
-    
-    // Esperar a que el tema esté completamente cargado
-    const checkTheme = () => {
-      if (typeof window !== 'undefined') {
-        // Verificar si hay un tema personalizado guardado
-        const savedTheme = localStorage.getItem('selected-theme');
-        if (savedTheme) {
-          // Si hay un tema guardado, aplicarlo
-          const themeClasses = ['purple-theme', 'amber-theme', 'blue-theme', 'bold-tech', 'notebook'];
-          const hasCustomTheme = themeClasses.some(cls => document.documentElement.classList.contains(cls));
-          
-          if (!hasCustomTheme && savedTheme !== 'light' && savedTheme !== 'dark' && savedTheme !== 'system') {
-            // Aplicar el tema si no está aplicado
-            document.documentElement.classList.add(savedTheme);
-          }
-        } else {
-          // Si no hay tema guardado, aplicar blue-theme por defecto
-          document.documentElement.classList.add('blue-theme');
-          localStorage.setItem('selected-theme', 'blue-theme');
-        }
-        setThemeLoaded(true);
-      }
-    };
-
-    // Verificar inmediatamente y luego con un pequeño delay para asegurar que el tema se aplique
-    checkTheme();
-    const timer = setTimeout(checkTheme, 100);
-    
-    return () => clearTimeout(timer);
+    // Con multitema eliminado, el login puede renderizar de inmediato
+    setThemeLoaded(true);
   }, []);
 
   // Efecto para redirigir si el usuario ya está autenticado

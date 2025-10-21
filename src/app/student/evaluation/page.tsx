@@ -59,7 +59,7 @@ import { useThemeManagement } from '../hooks/useThemeManagement';
 import { usePageVisibility } from '../hooks/usePageVisibility';
 import { useFocusRedirect } from '../hooks/useFocusRedirect';
 import { useTabSwitchCounter } from '../hooks/useTabSwitchCounter';
-import { useEvaluationCounter } from '../hooks/useEvaluationCounter';
+
 import { useDevToolsDetector } from '../hooks/useDevToolsDetector';
 import { EvaluationTimer } from '../components/EvaluationTimer';
 import { ProgressIndicator } from '../components/ProgressIndicator';
@@ -69,7 +69,7 @@ import { MarkdownViewer } from './components/markdown-viewer';
 import { CodeEditor } from './components/code-editor';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiKeyButton } from './components/ApiKeyButton';
-import { EvaluationCounter } from './components/EvaluationCounter';
+
 import { PunishmentModal } from './components/PunishmentModal';
 
 export default function StudentEvaluationPage() {
@@ -166,7 +166,7 @@ function EvaluationContent() {
   });
 
   // Usar el hook para manejar el contador de evaluaciones
-  const { evaluationCount, incrementCounter } = useEvaluationCounter(email || '');
+
 
   // Detectar DevTools y redirigir si se abren
   useDevToolsDetector({
@@ -545,8 +545,7 @@ function EvaluationContent() {
           apiKey
         )
 
-        // Incrementar el contador de evaluaciones después de una llamada exitosa a la API
-        incrementCounter()
+        // Contador de evaluaciones retirado
 
         // Actualizar el estado de la respuesta
         const updatedAnswers = [...answers]
@@ -601,8 +600,7 @@ function EvaluationContent() {
           apiKey
         )
 
-        // Incrementar el contador de evaluaciones después de una llamada exitosa a la API
-        incrementCounter()
+        // Contador de evaluaciones retirado
 
         // Actualizar el estado de la respuesta
         const updatedAnswers = [...answers]
@@ -651,7 +649,7 @@ function EvaluationContent() {
       }
 
       // Iniciar el temporizador de enfriamiento (60 segundos)
-      setButtonCooldown(30)
+      setButtonCooldown(10)
       const cooldownTimer = setInterval(() => {
         setButtonCooldown(prev => {
           if (prev <= 1) {
@@ -955,7 +953,6 @@ function EvaluationContent() {
               onOpenChange={setIsApiKeyDialogOpen}
             />
             
-            <EvaluationCounter count={evaluationCount} className="flex-shrink-0 h-7" />
             
             <TooltipProvider>
               <Tooltip>
