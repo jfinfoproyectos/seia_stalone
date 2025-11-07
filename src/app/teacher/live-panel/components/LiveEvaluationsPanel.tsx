@@ -147,8 +147,8 @@ export function LiveEvaluationsPanel({
                 key={evaluation.id}
                 className={`p-4 border rounded-lg transition-all cursor-pointer hover:shadow-md ${
                   isSelected 
-                    ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/20' 
-                    : 'border-border hover:border-border/80 bg-card dark:bg-card'
+                    ? 'border-primary/50 bg-accent text-accent-foreground' 
+                    : 'border-border hover:bg-accent/40'
                 }`}
                 onClick={() => onSelectEvaluation?.(evaluation.id)}
               >
@@ -178,13 +178,13 @@ export function LiveEvaluationsPanel({
                   {/* Estadísticas */}
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                      <div className="text-lg font-bold text-blue-600">
+                      <div className="text-lg font-bold text-foreground">
                         {evaluation.activeStudents}
                       </div>
                       <div className="text-xs text-muted-foreground">Activos</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-green-600">
+                      <div className="text-lg font-bold text-foreground">
                         {evaluation.submittedStudents}
                       </div>
                       <div className="text-xs text-muted-foreground">Enviadas</div>

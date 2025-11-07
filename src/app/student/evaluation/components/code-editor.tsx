@@ -154,146 +154,88 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
                 }
               };
 
-              // Configurar opciones del editor con restricciones de pegar
+              // Configurar opciones del editor permitiendo copy/paste y acciones por defecto
               editor.updateOptions({ 
-                // Deshabilitar menú contextual completamente para evitar pegar
-                contextmenu: false,
-                // Habilitar selección múltiple
+                contextmenu: true,
                 multiCursorModifier: 'ctrlCmd',
-                // Deshabilitar drag and drop para evitar pegar archivos
-                dragAndDrop: false,
+                dragAndDrop: true,
+                // Asegurar editor interactivo
+                readOnly: false,
               });
 
-              // Interceptar el método executeEdits para bloquear pegado
-              const originalExecuteEdits = editor.executeEdits;
-              editor.executeEdits = (source: string, edits: editor.IIdentifiedSingleEditOperation[], endCursorState?: editor.ICursorStateComputer) => {
-                // Bloquear solo si la fuente es explícitamente paste o clipboard
-                if (source === 'paste' || source === 'clipboard') {
-                  console.warn('[CodeEditor] Operación de pegado bloqueada desde executeEdits:', source);
-                  return false;
-                }
-                return originalExecuteEdits.call(editor, source, edits, endCursorState);
-              };
-
-              // Interceptar el método trigger para bloquear comandos de pegado
-              const originalTrigger = editor.trigger;
-              editor.trigger = (source: string, handlerId: string, payload: unknown) => {
-                const pasteCommands = [
-                  'paste', 
-                  'editor.action.clipboardPasteAction', 
-                  'editor.action.paste'
-                ];
-                
-                if (pasteCommands.includes(handlerId)) {
-                  console.warn('[CodeEditor] Comando de pegar bloqueado:', handlerId);
-                  return Promise.resolve();
-                }
-                
-                // Para el comando 'type', solo bloquear si es claramente un pegado
-                if (handlerId === 'type' && payload && typeof payload === 'object' && 'text' in payload) {
-                  const typedPayload = payload as { text: string };
-                  // Bloquear solo si el texto es muy largo Y contiene múltiples líneas (típico de pegado)
-                  if (typedPayload.text.length > 100 && typedPayload.text.includes('\n')) {
-                    console.warn('[CodeEditor] Pegado de múltiples líneas detectado y bloqueado');
-                    return Promise.resolve();
-                  }
-                }
-                
-                return originalTrigger.call(editor, source, handlerId, payload);
-              };
-
-              // Deshabilitar acciones específicas del editor
-              const pasteActions = [
-                'editor.action.clipboardPasteAction',
-                'editor.action.paste',
-                'paste'
-              ];
-
-              pasteActions.forEach(actionId => {
+              // Reforzar periódicamente que copy/paste no sea bloqueado por scripts externos
+              const reinforceCopyPaste = () => {
                 try {
-                  const action = editor.getAction(actionId);
-                  if (action) {
-                    action.run = () => {
-                      console.warn('[CodeEditor] Acción de pegar bloqueada:', actionId);
-                      return Promise.resolve();
-                    };
+                  editor.updateOptions({ contextmenu: true, dragAndDrop: true });
+                  const dom = editor.getDomNode();
+                  if (dom) {
+                    // Limpiar posibles handlers que bloqueen
+                    dom.onpaste = null;
+                    dom.oncopy = null;
+                    dom.oncut = null;
+                    const ta = dom.querySelector('textarea') as HTMLTextAreaElement | null;
+                    if (ta) {
+                      ta.onpaste = null;
+                      ta.oncopy = null;
+                      ta.oncut = null;
+                      ta.disabled = false;
+                    }
                   }
-                } catch (error) {
-                  console.warn('[CodeEditor] No se pudo deshabilitar la acción:', actionId, error);
+                  // Nivel documento
+                  document.onpaste = null;
+                  document.oncopy = null;
+                  document.oncut = null;
+                } catch {
+                  // Silencioso
                 }
-              });
+              };
+              // Ejecutar inmediatamente y de forma periódica
+              reinforceCopyPaste();
+              const reinforceIntervalId = window.setInterval(reinforceCopyPaste, 2000);
 
-              // Event listeners para bloquear eventos de pegar
+              // Event listeners para asegurar propagación y evitar bloqueos de copy/paste
               const editorDomNode = editor.getDomNode();
+              const stopCapture = (e: Event) => {
+                // No prevenir acción por defecto; solo detener otros listeners
+                if (e && typeof e.stopImmediatePropagation === 'function') {
+                  e.stopImmediatePropagation();
+                } else if (e) {
+                  e.stopPropagation();
+                }
+              };
+
               if (editorDomNode) {
-                // Bloquear eventos de pegar en el DOM
-                const preventPaste = (e: Event) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.warn('[CodeEditor] Evento de pegar bloqueado');
-                  return false;
-                };
-
-                const preventDrop = (e: DragEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.warn('[CodeEditor] Evento de drop bloqueado');
-                  return false;
-                };
-
-                const preventKeyboardPaste = (e: KeyboardEvent) => {
-                  // Bloquear Ctrl+V, Ctrl+Shift+V, Shift+Insert
-                  if ((e.ctrlKey && e.key === 'v') || 
-                      (e.ctrlKey && e.shiftKey && e.key === 'V') ||
-                      (e.shiftKey && e.key === 'Insert')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.warn('[CodeEditor] Atajo de teclado para pegar bloqueado');
-                    return false;
-                  }
-                };
-
-                // Agregar event listeners
-                editorDomNode.addEventListener('paste', preventPaste, true);
-                editorDomNode.addEventListener('drop', preventDrop, true);
-                editorDomNode.addEventListener('dragover', preventDrop, true);
-                editorDomNode.addEventListener('keydown', preventKeyboardPaste, true);
-
-                // También bloquear en el contenedor del editor
+                editorDomNode.addEventListener('copy', stopCapture, true);
+                editorDomNode.addEventListener('paste', stopCapture, true);
+                editorDomNode.addEventListener('cut', stopCapture, true);
                 const textArea = editorDomNode.querySelector('textarea');
                 if (textArea) {
-                  textArea.addEventListener('paste', preventPaste, true);
-                  textArea.addEventListener('drop', preventDrop, true);
-                  textArea.addEventListener('keydown', preventKeyboardPaste, true);
+                  textArea.addEventListener('copy', stopCapture, true);
+                  textArea.addEventListener('paste', stopCapture, true);
+                  textArea.addEventListener('cut', stopCapture, true);
                 }
-
               }
 
               editor.layout();
 
               window.addEventListener('resize', updateEditorOptions);
               
-              // Retornar función de cleanup que incluye tanto resize como paste prevention
+              // Retornar función de cleanup: resize, refuerzo y listeners
               return () => {
                 window.removeEventListener('resize', updateEditorOptions);
-                
-                // Cleanup de event listeners de paste prevention
-                const editorDomNode = editor.getDomNode();
-                if (editorDomNode) {
-                  const preventPaste = () => {};
-                  const preventDrop = () => {};
-                  const preventKeyboardPaste = () => {};
-                  
-                  editorDomNode.removeEventListener('paste', preventPaste, true);
-                  editorDomNode.removeEventListener('drop', preventDrop, true);
-                  editorDomNode.removeEventListener('dragover', preventDrop, true);
-                  editorDomNode.removeEventListener('keydown', preventKeyboardPaste, true);
-                  
-                  const textArea = editorDomNode.querySelector('textarea');
-                  if (textArea) {
-                    textArea.removeEventListener('paste', preventPaste, true);
-                    textArea.removeEventListener('drop', preventDrop, true);
-                    textArea.removeEventListener('keydown', preventKeyboardPaste, true);
+                // Limpiar intervalo de refuerzo
+                try { window.clearInterval(reinforceIntervalId); } catch {}
+                // Cleanup de event listeners de refuerzo
+                const dom = editor.getDomNode();
+                if (dom) {
+                  dom.removeEventListener('copy', stopCapture, true);
+                  dom.removeEventListener('paste', stopCapture, true);
+                  dom.removeEventListener('cut', stopCapture, true);
+                  const ta = dom.querySelector('textarea');
+                  if (ta) {
+                    ta.removeEventListener('copy', stopCapture, true);
+                    ta.removeEventListener('paste', stopCapture, true);
+                    ta.removeEventListener('cut', stopCapture, true);
                   }
                 }
               };

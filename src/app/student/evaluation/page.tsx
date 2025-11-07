@@ -64,13 +64,13 @@ import { useDevToolsDetector } from '../hooks/useDevToolsDetector';
 import { EvaluationTimer } from '../components/EvaluationTimer';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { QuestionNavigator } from '../components/QuestionNavigator';
-import { FullscreenToggle } from '../components/FullscreenToggle';
 import { MarkdownViewer } from './components/markdown-viewer';
 import { CodeEditor } from './components/code-editor';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiKeyButton } from './components/ApiKeyButton';
 
 import { PunishmentModal } from './components/PunishmentModal';
+import { TeacherMessageModal } from './components/TeacherMessageModal';
 
 export default function StudentEvaluationPage() {
   return (
@@ -152,17 +152,23 @@ function EvaluationContent() {
     enabled: false // Deshabilitado para usar solo el contador
   });
 
-  // Usar el hook para contar cambios de pestaña - modal cada 5 cambios
+  // Usar el hook para contar cambios de pestaña y redirigir cada 3 cambios
   useTabSwitchCounter({
     enabled: true,
     onTabSwitch: (count) => {
       console.log(`[Tab Switch Counter] Cambios de pestaña: ${count}`);
-    },
-    onPunishmentTrigger: (count) => {
-      console.warn(`[Security Pause] Activando pausa de seguridad por ${count} cambios de pestaña`);
-      setPunishmentTabSwitchCount(count);
-      setIsPunishmentModalOpen(true);
+      // Cada 3 cambios, no bloquear: redirigir a la ventana de ingreso de código
+      if (count % 3 === 0) {
+        try {
+          // Limpia estado de pausa y contador para la próxima sesión
+          localStorage.removeItem('securityPauseState');
+          localStorage.removeItem('tabSwitchCount');
+        } catch {}
+        console.warn('[Security] 3 cambios de pestaña detectados - redirigiendo a la página de entrada');
+        router.push('/student');
+      }
     }
+    // No proveer onPunishmentTrigger para evitar el modal de bloqueo
   });
 
   // Usar el hook para manejar el contador de evaluaciones
@@ -179,6 +185,23 @@ function EvaluationContent() {
       router.push('/student');
     }
   });
+
+  // Redirigir inmediatamente si se detecta un redimensionamiento de la ventana
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      try {
+        // Redirigir a la pantalla de ingreso de código del estudiante
+        router.push('/student');
+      } catch (err) {
+        console.error('[Security] Error al redirigir por resize:', err);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [router]);
 
   // Detectar estado de pausa persistente al cargar la página
   useEffect(() => {
@@ -649,7 +672,7 @@ function EvaluationContent() {
       }
 
       // Iniciar el temporizador de enfriamiento (60 segundos)
-      setButtonCooldown(10)
+      setButtonCooldown(15)
       const cooldownTimer = setInterval(() => {
         setButtonCooldown(prev => {
           if (prev <= 1) {
@@ -868,6 +891,8 @@ function EvaluationContent() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background overflow-hidden" style={{ zIndex: 1, position: 'relative' }}>
+      {/* Modal de mensajes del profesor con espera forzada de 60s */}
+      <TeacherMessageModal uniqueCode={uniqueCode || ''} email={email || ''} />
       {/* Barra superior con información y controles - Mejorada distribución y responsividad */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center p-2 bg-card shadow-md flex-shrink-0 border-b gap-2 min-h-[3rem]">
         
@@ -938,14 +963,7 @@ function EvaluationContent() {
               <span className="xs:hidden sm:inline lg:hidden">{loading ? '...' : 'Env'}</span>
             </Button>
             
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span><FullscreenToggle className="flex-shrink-0 h-7 w-7" /></span>
-                </TooltipTrigger>
-                <TooltipContent className="text-xs">Pantalla completa</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Pantalla completa eliminada */}
             
             <ApiKeyButton 
               className="flex-shrink-0 h-7 w-7" 

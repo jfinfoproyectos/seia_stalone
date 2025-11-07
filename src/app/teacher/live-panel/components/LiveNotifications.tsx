@@ -95,7 +95,7 @@ export function LiveNotifications({ enabled, className }: LiveNotificationsProps
       case "warning":
         return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
       case "info":
-        return <Clock className="w-4 h-4 text-gray-500" />;
+  return <Clock className="w-4 h-4 text-muted-foreground" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
@@ -164,7 +164,7 @@ export function LiveNotifications({ enabled, className }: LiveNotificationsProps
           
           <CardContent className="p-0 max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+    <div className="p-4 text-center text-muted-foreground text-sm">
                 No hay notificaciones
               </div>
             ) : (
@@ -172,9 +172,9 @@ export function LiveNotifications({ enabled, className }: LiveNotificationsProps
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      !notification.read ? "bg-blue-50 border-l-4 border-l-blue-500" : ""
-                    }`}
+      className={`p-3 hover:bg-accent cursor-pointer transition-colors ${
+        !notification.read ? "bg-accent border-l-4 border-l-primary" : ""
+      }`}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div className="flex items-start gap-3">
@@ -183,14 +183,14 @@ export function LiveNotifications({ enabled, className }: LiveNotificationsProps
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+        <p className="text-sm font-medium text-foreground truncate">
                             {notification.title}
                           </p>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
+        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 ml-2" />
                           )}
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
                           {notification.message}
                         </p>
                         {notification.studentName && (
@@ -198,7 +198,7 @@ export function LiveNotifications({ enabled, className }: LiveNotificationsProps
                             {notification.studentName}
                           </p>
                         )}
-                        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
                           {formatDistanceToNow(notification.timestamp, { 
                             addSuffix: true, 
                             locale: es 

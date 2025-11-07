@@ -42,8 +42,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MarkdownViewer } from '@/app/teacher/evaluations/components/markdown-viewer';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Link, Image as PDFImage } from '@react-pdf/renderer';
+import { useTheme } from 'next-themes';
+// Removed jsPDF autoTable import
 import {
   RepositoryStructure,
   RepositoryDirectory,
@@ -58,12 +59,197 @@ import {
   correctPromptWriting
 } from '@/lib/gemini-repository-analyzer';
 
-// Extend jsPDF type for autoTable
-interface PDFDocumentWithAutoTable extends jsPDF {
-  lastAutoTable?: {
-    finalY: number;
+// Estilos globales del PDF (profesional)
+const getPdfStyles = (isDark: boolean) => {
+  const palette = {
+    pageBg: isDark ? '#111111' : '#ffffff',
+    text: isDark ? '#eeeeee' : '#222222',
+    muted: isDark ? '#bbbbbb' : '#555555',
+    border: isDark ? '#444444' : '#cccccc',
+    hr: isDark ? '#333333' : '#dddddd',
   };
-}
+
+  return StyleSheet.create({
+    page: { padding: 40, fontSize: 11, backgroundColor: palette.pageBg },
+    header: { marginBottom: 20 },
+    title: { fontSize: 20, fontWeight: 'bold', color: palette.text },
+    subtitle: { fontSize: 12, marginTop: 6, color: palette.text },
+    meta: { fontSize: 10, color: palette.muted },
+    section: { marginTop: 16 },
+    sectionTitle: { fontSize: 12, fontWeight: 'bold', marginBottom: 6, color: palette.text },
+    text: { fontSize: 10, lineHeight: 1.5, color: palette.text },
+    footerText: { position: 'absolute', bottom: 24, left: 40, right: 40, fontSize: 9, color: palette.muted, textAlign: 'center' },
+    // Markdown styles
+    h1: { fontSize: 16, fontWeight: 'bold', marginBottom: 6, color: palette.text },
+    h2: { fontSize: 14, fontWeight: 'bold', marginBottom: 6, color: palette.text },
+    h3: { fontSize: 12, fontWeight: 'bold', marginBottom: 6, color: palette.text },
+    p: { fontSize: 10, lineHeight: 1.5, marginBottom: 6, color: palette.text },
+    listContainer: { marginLeft: 12, marginBottom: 6 },
+    li: { fontSize: 10, lineHeight: 1.5, color: palette.text },
+    blockquote: { borderLeftWidth: 2, borderLeftColor: palette.border, paddingLeft: 8, color: palette.text, marginBottom: 6 },
+    codeBlock: { fontFamily: 'Courier', fontSize: 9, borderWidth: 1, borderColor: palette.border, padding: 8, borderRadius: 4, marginBottom: 8, color: palette.text },
+    inlineCode: { fontFamily: 'Courier', fontSize: 9, borderWidth: 1, borderColor: palette.border, padding: 2, borderRadius: 3, color: palette.text },
+    bold: { fontWeight: 'bold', color: palette.text },
+    italic: { fontStyle: 'italic', color: palette.text },
+    hr: { borderBottomWidth: 1, borderBottomColor: palette.hr, marginVertical: 8 },
+    image: { width: 300, height: 200, objectFit: 'contain', marginBottom: 8 }
+  });
+};
+
+// Renderer de Markdown robusto para React PDF
+const MarkdownRenderer: React.FC<{ markdown: string; styles: ReturnType<typeof getPdfStyles> }> = ({ markdown, styles }) => {
+  const elements: React.ReactElement[] = [];
+  const lines = (markdown || '').split(/\r?\n/);
+  let inCode = false;
+  let codeLines: string[] = [];
+  let listBuffer: { ordered: boolean; items: string[] } | null = null;
+
+  const flushList = () => {
+    if (listBuffer) {
+      elements.push(
+        <View style={styles.listContainer} key={`list-${elements.length}`}>
+          {listBuffer.items.map((it, idx) => (
+            <Text style={styles.li} key={`li-${idx}`}>{listBuffer!.ordered ? `${idx + 1}. ` : '• '}{renderInline(it)}</Text>
+          ))}
+        </View>
+      );
+      listBuffer = null;
+    }
+  };
+
+  const renderInline = (text: string): React.ReactNode => {
+    // Images ![alt](src)
+    const imgMatch = text.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      const src = imgMatch[2];
+      elements.push(<PDFImage key={`img-${elements.length}`} style={styles.image} src={src} />);
+      return null;
+    }
+
+    // Links [text](url)
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = linkRegex.exec(text))) {
+      const [full, label, url] = m;
+      if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index));
+      parts.push(<Link key={`lnk-${m.index}-${url}`} src={url}>{label}</Link>);
+      lastIndex = m.index + full.length;
+    }
+    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+
+    // Inline styles: bold, italic, code
+    const styleTokens = /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(`[^`]+`)/g;
+    const processed: React.ReactNode[] = [];
+    for (const part of parts) {
+      if (typeof part !== 'string') { processed.push(part); continue; }
+      let cursor = 0; let match: RegExpExecArray | null;
+      while ((match = styleTokens.exec(part))) {
+        if (match.index > cursor) processed.push(part.slice(cursor, match.index));
+        const token = match[0];
+        if (token.startsWith('**')) processed.push(<Text style={styles.bold} key={`b-${match.index}`}>{token.slice(2, -2)}</Text>);
+        else if (token.startsWith('*')) processed.push(<Text style={styles.italic} key={`i-${match.index}`}>{token.slice(1, -1)}</Text>);
+        else if (token.startsWith('`')) processed.push(<Text style={styles.inlineCode} key={`c-${match.index}`}>{token.slice(1, -1)}</Text>);
+        cursor = match.index + token.length;
+      }
+      if (cursor < part.length) processed.push(part.slice(cursor));
+    }
+    return processed;
+  };
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+
+    // Code fence
+    if (/^```/.test(line)) {
+      if (!inCode) { inCode = true; codeLines = []; flushList(); }
+      else { inCode = false; elements.push(<Text style={styles.codeBlock} key={`code-${elements.length}`}>{codeLines.join('\n')}</Text>); codeLines = []; }
+      continue;
+    }
+    if (inCode) { codeLines.push(line); continue; }
+
+    // Horizontal rule
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(line)) { flushList(); elements.push(<View style={styles.hr} key={`hr-${elements.length}`} />); continue; }
+
+    // Blank line => paragraph break
+    if (!line.trim()) { flushList(); elements.push(<Text key={`sp-${elements.length}`}> </Text>); continue; }
+
+    // Headings
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { flushList(); const level = h[1].length; const content = h[2]; const style = level === 1 ? styles.h1 : level === 2 ? styles.h2 : styles.h3; elements.push(<Text style={style} key={`h-${elements.length}`}>{content}</Text>); continue; }
+
+    // Blockquote
+    const bq = line.match(/^>\s+(.*)$/);
+    if (bq) { flushList(); elements.push(<Text style={styles.blockquote} key={`bq-${elements.length}`}>{renderInline(bq[1])}</Text>); continue; }
+
+    // Lists
+    const li = line.match(/^\s*([-*]|\d+\.)\s+(.*)$/);
+    if (li) {
+      const ordered = /\d+\./.test(li[1]);
+      if (!listBuffer) listBuffer = { ordered, items: [] };
+      listBuffer.items.push(li[2]);
+      continue;
+    }
+
+    // Paragraph
+    flushList();
+    elements.push(<Text style={styles.p} key={`p-${elements.length}`}>{renderInline(line)}</Text>);
+  }
+  flushList();
+
+  return <View>{elements}</View>;
+};
+
+// Documento profesional de análisis con @react-pdf/renderer
+const ReportDocument: React.FC<{ analysisResult: AnalysisResult; repositoryStructure: RepositoryStructure; scoreScale: 'NONE' | 'FIVE' | 'TEN'; isDark: boolean; }> = ({ analysisResult, repositoryStructure, scoreScale, isDark }) => {
+  const dateStr = new Date(analysisResult.analyzedAt || Date.now()).toLocaleDateString('es-ES');
+  const styles = getPdfStyles(isDark);
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Reporte de Análisis de Repositorio</Text>
+          <Text style={styles.subtitle}>{repositoryStructure.name}</Text>
+          <Text style={styles.meta}>URL: {repositoryStructure.url}</Text>
+          <Text style={styles.meta}>Fecha: {dateStr}</Text>
+        </View>
+
+        {analysisResult.studentInfo && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Datos del Estudiante</Text>
+            <Text style={styles.text}>Nombre: {analysisResult.studentInfo.nombres} {analysisResult.studentInfo.apellidos}</Text>
+            <Text style={styles.text}>Grupo: {analysisResult.studentInfo.grupo}</Text>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Resumen</Text>
+          <Text style={styles.text}>Elementos Analizados: {analysisResult.itemsAnalyzed}</Text>
+          {scoreScale !== 'NONE' && (
+            <Text style={styles.text}>Puntuación: {analysisResult.score}/{scoreScale === 'FIVE' ? 5 : 10}</Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Resumen Ejecutivo</Text>
+          <MarkdownRenderer markdown={analysisResult.summary || ''} styles={styles} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Análisis Detallado</Text>
+          <MarkdownRenderer markdown={analysisResult.analysis || ''} styles={styles} />
+        </View>
+
+        <Text
+          style={styles.footerText}
+          render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
+        />
+      </Page>
+    </Document>
+  );
+};
 
 interface TreeNode {
   path: string;
@@ -78,6 +264,8 @@ interface TreeNode {
 
 export default function RepositoryAnalyzerPage() {
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   
   // Estados principales
   const [repoUrl, setRepoUrl] = useState('');
@@ -85,6 +273,13 @@ export default function RepositoryAnalyzerPage() {
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Estados para forks del repositorio original
+  const [originalRepoUrl, setOriginalRepoUrl] = useState('');
+  const [forks, setForks] = useState<{ id: number; full_name: string; html_url: string; owner: { login: string }; info?: { nombres: string; apellidos: string; grupo: string } }[]>([]);
+  const [loadingForks, setLoadingForks] = useState(false);
+  const [forksError, setForksError] = useState('');
+  const [forkSearch, setForkSearch] = useState('');
   
   // Estados del repositorio
   const [repositoryStructure, setRepositoryStructure] = useState<RepositoryStructure | null>(null);
@@ -192,6 +387,7 @@ export default function RepositoryAnalyzerPage() {
   const [includeContent, setIncludeContent] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [scoreScale, setScoreScale] = useState<'NONE' | 'TEN' | 'FIVE'>('FIVE');
   
   // Estados de la interfaz
   const [activeTab, setActiveTab] = useState('scan');
@@ -217,15 +413,16 @@ export default function RepositoryAnalyzerPage() {
     }
   };
 
-  // Función para escanear el repositorio
-  const handleScanRepository = async () => {
-    if (!repoUrl.trim()) {
+  // Función para escanear el repositorio (acepta repo opcional para evitar estados stale)
+  const handleScanRepository = async (repoArg?: string) => {
+    const input = (repoArg ?? repoUrl).trim();
+    if (!input) {
       setError('Por favor, ingresa la URL del repositorio');
       return;
     }
 
     // Permitir pegar la URL completa o owner/repo
-    let repoPath = repoUrl.trim();
+    let repoPath = input;
     
     // Si es una URL, extraer owner/repo
     const match = repoPath.match(/github\.com[\/:]([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/.*)?$/i);
@@ -472,7 +669,8 @@ export default function RepositoryAnalyzerPage() {
         repositoryStructure,
         selectedItems,
         customPrompt,
-        includeContent
+        includeContent,
+        scoreScale
       };
 
       const result = await analyzeRepositoryElements(analysisRequest, githubToken || undefined);
@@ -491,159 +689,113 @@ export default function RepositoryAnalyzerPage() {
     }
   };
 
-  // Función para generar PDF del análisis
-  const generateAnalysisPDF = () => {
-    if (!analysisResult || !repositoryStructure) {
-      toast({
-        title: "Error",
-        description: "No hay resultados de análisis para exportar",
-        variant: "destructive"
-      });
+// Exportación PDF ahora se realiza con PDFDownloadLink y ReportDocument de @react-pdf/renderer
+
+  // Helpers de autenticación para GitHub
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
+    if (githubToken) headers['Authorization'] = `token ${githubToken}`;
+    return headers;
+  };
+
+  // Helpers para cargar info.json de cada fork
+  type ForkInfo = { nombres: string; apellidos: string; grupo: string };
+
+  const fetchForkInfoJson = async (fullName: string): Promise<ForkInfo | null> => {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${fullName}/contents/info.json`, { headers: getAuthHeaders() });
+      if (res.status === 404) return null;
+      if (!res.ok) return null;
+      const contentData = await res.json();
+      if (contentData?.download_url) {
+        const rawRes = await fetch(contentData.download_url);
+        if (!rawRes.ok) return null;
+        const text = await rawRes.text();
+        const parsed = JSON.parse(text);
+        return { nombres: parsed.nombres || '', apellidos: parsed.apellidos || '', grupo: parsed.grupo || '' };
+      } else if (contentData?.content && contentData?.encoding === 'base64') {
+        const decoded = typeof atob === 'function' ? atob(contentData.content) : Buffer.from(contentData.content, 'base64').toString('utf-8');
+        const parsed = JSON.parse(decoded);
+        return { nombres: parsed.nombres || '', apellidos: parsed.apellidos || '', grupo: parsed.grupo || '' };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const loadInfoForForks = async (forksList: { full_name: string }[]) => {
+    const entries = await Promise.all(
+      forksList.map(async (f) => ({ full_name: f.full_name, info: await fetchForkInfoJson(f.full_name) }))
+    );
+    const infoMap = new Map<string, ForkInfo>(entries.filter(e => e.info).map(e => [e.full_name, e.info as ForkInfo]));
+    setForks(prev => prev.map(f => infoMap.has(f.full_name) ? { ...f, info: infoMap.get(f.full_name)! } : f));
+  };
+
+  // Helpers para cargar info.json de cada fork
+  
+
+  // Buscar forks del repositorio original
+  const handleFetchForks = async () => {
+    if (!originalRepoUrl.trim()) {
+      setForksError('Por favor, ingresa la URL o owner/repo del repositorio original');
       return;
     }
 
-    const doc = new jsPDF() as PDFDocumentWithAutoTable;
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 20;
-    let yPosition = margin;
-
-    // Título del documento
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Reporte de Análisis de Repositorio', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-
-    // Información del repositorio
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Repositorio: ${repositoryStructure.name}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`URL: ${repositoryStructure.url}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Fecha de análisis: ${new Date().toLocaleDateString('es-ES')}`, margin, yPosition);
-    yPosition += 15;
-
-    // Resumen del análisis
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Resumen del Análisis', margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    
-    const summaryData = [
-      ['Puntuación General', `${analysisResult.score}/10`],
-      ['Elementos Analizados', analysisResult.itemsAnalyzed.toString()],
-      ['Total de Recomendaciones', analysisResult.recommendations.length.toString()]
-    ];
-
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Métrica', 'Valor']],
-      body: summaryData,
-      theme: 'grid',
-      headStyles: { fillColor: [66, 139, 202] },
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 10 }
-    });
-
-    yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : yPosition + 60;
-
-    // Verificar si necesitamos una nueva página
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = margin;
+    // Permitir pegar la URL completa o owner/repo
+    let repoPath = originalRepoUrl.trim();
+    const match = repoPath.match(/github\.com[\/:]([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/.*)?$/i);
+    if (match) {
+      repoPath = `${match[1]}/${match[2]}`;
+    }
+    repoPath = repoPath.replace(/\/$/, '').replace(/\.git$/, '');
+    if (!repoPath.includes('/')) {
+      setForksError('Formato inválido. Usa owner/repo o la URL completa del repositorio.');
+      return;
     }
 
-    // Recomendaciones
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Recomendaciones', margin, yPosition);
-    yPosition += 10;
+    setLoadingForks(true);
+    setForksError('');
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
-    const recommendationsData = analysisResult.recommendations.map((rec, index) => [
-      (index + 1).toString(),
-      rec.length > 80 ? rec.substring(0, 80) + '...' : rec
-    ]);
-
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['#', 'Recomendación']],
-      body: recommendationsData,
-      theme: 'grid',
-      headStyles: { fillColor: [66, 139, 202] },
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9 },
-      columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 'auto' }
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repoPath}/forks`, { headers: getAuthHeaders() });
+      if (res.status === 403) {
+        const errorData = await res.json().catch(() => ({}));
+        const msg = (errorData && errorData.message) || '';
+        if (msg.includes('rate limit')) {
+          const suggestion = githubToken
+            ? 'Límite de API excedido incluso con token. Espera unos minutos.'
+            : 'Límite de API excedido. Configura un Personal Access Token para aumentar el límite a 5,000/hora.';
+          throw new Error(`⚠️ ${suggestion}`);
+        } else if (msg.includes('Forbidden')) {
+          throw new Error('❌ Acceso denegado. El repositorio puede ser privado o no existe.');
+        }
+      } else if (res.status === 404) {
+        throw new Error(`❌ Repository '${repoPath}' not found. Verifica el nombre y que sea público.`);
+      } else if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`❌ Error ${res.status}: ${errorData.message || 'No se pudo obtener los forks'}`);
       }
-    });
 
-    yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : yPosition + 100;
+      const data: { id: number; full_name: string; html_url: string; owner: { login: string } }[] = await res.json();
+      setForks(data);
+      setOriginalRepoUrl(repoPath);
+      toast({ title: 'Forks cargados', description: `Se encontraron ${data.length} forks` });
 
-    // Análisis detallado (primera parte)
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = margin;
+      // Cargar info.json por cada fork
+      await loadInfoForForks(data);
+    } catch (err: unknown) {
+      setForks([]);
+      if (err instanceof Error) setForksError(err.message); else setForksError('Error desconocido al obtener forks');
+    } finally {
+      setLoadingForks(false);
     }
+  };
 
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Análisis Detallado', margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    
-    // Dividir el análisis detallado en líneas
-    const detailedAnalysisLines = doc.splitTextToSize(
-      analysisResult.analysis.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'), // Remover enlaces markdown
-      pageWidth - 2 * margin
-    );
-
-    // Agregar líneas del análisis detallado
-    for (let i = 0; i < Math.min(detailedAnalysisLines.length, 30); i++) {
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = margin;
-      }
-      doc.text(detailedAnalysisLines[i], margin, yPosition);
-      yPosition += 5;
-    }
-
-    if (detailedAnalysisLines.length > 30) {
-      yPosition += 5;
-      doc.setFont('helvetica', 'italic');
-      doc.text('(Análisis truncado para el PDF. Ver reporte completo en la aplicación)', margin, yPosition);
-    }
-
-    // Pie de página
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(
-        `Página ${i} de ${pageCount} - Generado por SEIAC Repository Analyzer`,
-        pageWidth / 2,
-        doc.internal.pageSize.height - 10,
-        { align: 'center' }
-      );
-    }
-
-    // Guardar el PDF
-    const fileName = `analisis-repositorio-${repositoryStructure.name.replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
-
-    toast({
-      title: "PDF generado",
-      description: `El reporte se ha descargado como ${fileName}`,
-    });
+  // Seleccionar un fork y escanear su estructura
+  const selectForkAndScan = async (forkFullName: string) => {
+    setRepoUrl(forkFullName); // actualizar el input visible
+    await handleScanRepository(forkFullName); // usar el valor directamente para evitar doble clic
   };
 
   // Función para filtrar nodos según el texto de búsqueda
@@ -688,8 +840,8 @@ export default function RepositoryAnalyzerPage() {
     return (
       <div key={node.path} className="select-none">
         <div 
-          className={`flex items-center py-1 px-2 hover:bg-gray-50 rounded cursor-pointer ${
-            node.selected ? 'bg-blue-50' : ''
+          className={`flex items-center py-1 px-2 hover:bg-muted dark:hover:bg-input/50 rounded cursor-pointer ${
+            node.selected ? 'bg-accent/20' : ''
           }`}
           style={{ paddingLeft: `${level * 20 + 8}px` }}
         >
@@ -697,7 +849,7 @@ export default function RepositoryAnalyzerPage() {
           {node.type === 'directory' && (
             <button
               onClick={() => toggleNodeExpansion(node.path)}
-              className="mr-1 p-1 hover:bg-gray-200 rounded"
+              className="mr-1 p-1 hover:bg-muted rounded"
             >
               {hasChildren && isExpanded ? (
                 <ChevronDown className="h-3 w-3" />
@@ -719,9 +871,9 @@ export default function RepositoryAnalyzerPage() {
           
           {/* Icono del tipo */}
           {node.type === 'directory' ? (
-            <Folder className="h-4 w-4 mr-2 text-blue-500" />
+            <Folder className="h-4 w-4 mr-2 text-primary" />
           ) : (
-            <File className="h-4 w-4 mr-2 text-gray-500" />
+            <File className="h-4 w-4 mr-2 text-muted-foreground" />
           )}
           
           {/* Nombre del elemento */}
@@ -735,7 +887,7 @@ export default function RepositoryAnalyzerPage() {
           )}
           
           {node.type === 'file' && node.size && (
-            <span className="ml-2 text-xs text-gray-500">
+            <span className="ml-2 text-xs text-muted-foreground">
               {formatFileSize(node.size)}
             </span>
           )}
@@ -840,6 +992,7 @@ export default function RepositoryAnalyzerPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Escaneo directo de un repositorio */}
               <div>
                 <Label htmlFor="repo-url" className='mb-2'>URL del Repositorio</Label>
                 <Input
@@ -852,13 +1005,13 @@ export default function RepositoryAnalyzerPage() {
               </div>
               
               {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded">
+                <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">
                   {error}
                 </div>
               )}
               
               <Button 
-                onClick={handleScanRepository} 
+                onClick={() => handleScanRepository()} 
                 disabled={loading || !repoUrl.trim()}
                 className="w-full"
               >
@@ -874,6 +1027,92 @@ export default function RepositoryAnalyzerPage() {
                   </>
                 )}
               </Button>
+
+              {/* Divider */}
+              <div className="relative my-4">
+                <div className="border-t" />
+                <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground">o</div>
+              </div>
+
+              {/* Escaneo de forks del repositorio original */}
+              <div className="space-y-2">
+                <Label htmlFor="original-repo-url" className='mb-2'>Repositorio Original (para listar forks)</Label>
+                <Input
+                  id="original-repo-url"
+                  placeholder="URL completa o owner/repo del repo original"
+                  value={originalRepoUrl}
+                  onChange={(e) => setOriginalRepoUrl(e.target.value)}
+                  disabled={loadingForks}
+                />
+                {forksError && (
+                  <div className="text-destructive-foreground text-sm bg-destructive/15 p-3 rounded">
+                    {forksError}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleFetchForks}
+                    disabled={loadingForks || !originalRepoUrl.trim()}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {loadingForks ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Buscando forks...
+                      </>
+                    ) : (
+                      <>
+                        <GitBranch className="h-4 w-4 mr-2" />
+                        Listar Forks
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Lista de forks con filtro */}
+              {forks.length > 0 && (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filtrar forks por nombre..."
+                      value={forkSearch}
+                      onChange={(e) => setForkSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  <div className="border rounded-lg max-h-72 overflow-y-auto">
+                    {forks
+                      .filter(f => !forkSearch.trim() || f.full_name.toLowerCase().includes(forkSearch.toLowerCase()))
+                      .map((fork) => (
+                        <div key={fork.id} className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-muted">
+                          <div className="flex items-center gap-2">
+                            <GitBranch className="h-4 w-4 text-primary" />
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{fork.full_name}</span>
+                              {fork.info && (
+                                <span className="text-xs text-muted-foreground">
+                                  {fork.info.nombres} {fork.info.apellidos} — Grupo: {fork.info.grupo}
+                                </span>
+                              )}
+                              <a href={fork.html_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center">
+                                <ExternalLink className="h-3 w-3 mr-1" /> Ver en GitHub
+                              </a>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <Button size="sm" onClick={() => selectForkAndScan(fork.full_name)}>
+                               Escanear este fork
+                             </Button>
+                           </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1010,10 +1249,10 @@ export default function RepositoryAnalyzerPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Resumen de selección */}
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="border border-input rounded-lg bg-secondary p-4">
                 <h4 className="font-medium mb-2">Elementos seleccionados para análisis:</h4>
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">{selectedCount}</span> elementos seleccionados
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{selectedCount}</span> elementos seleccionados
                   {selectedCount > 0 && (
                     <div className="mt-2 max-h-32 overflow-y-auto">
                       {selectedItems
@@ -1022,15 +1261,15 @@ export default function RepositoryAnalyzerPage() {
                         .map(item => (
                           <div key={item.path} className="flex items-center text-xs">
                             {item.type === 'directory' ? (
-                              <Folder className="h-3 w-3 mr-1 text-blue-500" />
+                              <Folder className="h-3 w-3 mr-1 text-muted-foreground" />
                             ) : (
-                              <File className="h-3 w-3 mr-1 text-gray-500" />
+                              <File className="h-3 w-3 mr-1 text-muted-foreground" />
                             )}
                             {item.path}
                           </div>
                         ))}
                       {selectedCount > 10 && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           ... y {selectedCount - 10} elementos más
                         </div>
                       )}
@@ -1169,9 +1408,27 @@ export default function RepositoryAnalyzerPage() {
                       Incluir contenido de archivos en el análisis
                     </Label>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Si está deshabilitado, solo se analizará la estructura sin el contenido de los archivos
                   </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm">Escala de calificación</Label>
+                      <Select value={scoreScale} onValueChange={(v) => setScoreScale(v as 'NONE'|'TEN'|'FIVE')}>
+                        <SelectTrigger className="mt-1 w-full">
+                          <SelectValue placeholder="Selecciona la escala" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIVE">0.0–5.0</SelectItem>
+                          <SelectItem value="NONE">Sin calificación</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Si seleccionas 0.0–5.0, el análisis pedirá calificar con esa escala.
+                      </p>
+                    </div>
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
               
@@ -1214,9 +1471,9 @@ export default function RepositoryAnalyzerPage() {
                       <FileText className="h-5 w-5 mr-2" />
                       Resultados del Análisis
                     </div>
-                    {analysisResult.score !== null && analysisResult.score !== undefined && (
-                      <Badge variant={analysisResult.score >= 7 ? 'default' : analysisResult.score >= 5 ? 'secondary' : 'destructive'}>
-                        Puntuación: {analysisResult.score}/10
+                    {analysisResult.score !== null && analysisResult.score !== undefined && scoreScale !== 'NONE' && (
+                      <Badge variant={(analysisResult.score / (scoreScale === 'FIVE' ? 5 : 10)) >= 0.7 ? 'default' : (analysisResult.score / (scoreScale === 'FIVE' ? 5 : 10)) >= 0.5 ? 'secondary' : 'destructive'}>
+                        Puntuación: {analysisResult.score}/{scoreScale === 'FIVE' ? 5 : 10}
                       </Badge>
                     )}
                   </CardTitle>
@@ -1226,44 +1483,47 @@ export default function RepositoryAnalyzerPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Información del análisis */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-input rounded-lg bg-secondary">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-blue-600">{analysisResult.itemsAnalyzed}</div>
-                      <div className="text-sm text-gray-600">Elementos Analizados</div>
+                      <div className="text-lg font-bold text-foreground">{analysisResult.itemsAnalyzed}</div>
+                      <div className="text-sm text-muted-foreground">Elementos Analizados</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-green-600">{analysisResult.recommendations.length}</div>
-                      <div className="text-sm text-gray-600">Recomendaciones</div>
+                      <div className="text-lg font-bold text-foreground">{analysisResult.recommendations.length}</div>
+                      <div className="text-sm text-muted-foreground">Recomendaciones</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-purple-600">
+                      <div className="text-lg font-bold text-foreground">
                         <ExternalLink className="h-4 w-4 inline mr-1" />
                         <a href={analysisResult.repositoryUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
                           Ver Repo
                         </a>
                       </div>
-                      <div className="text-sm text-gray-600">Repositorio</div>
+                      <div className="text-sm text-muted-foreground">Repositorio</div>
                     </div>
                   </div>
                   
                   {/* Resumen ejecutivo */}
                   <div>
                     <h4 className="font-medium mb-2">Resumen Ejecutivo</h4>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm">{analysisResult.summary}</p>
+                    <div className="border border-input rounded-lg bg-secondary p-4">
+                      <p className="text-sm text-foreground">{analysisResult.summary}</p>
                     </div>
                   </div>
                   
-                  {/* Botón de exportación PDF */}
+                  {/* Exportación PDF con React PDF */}
                   <div className="flex justify-center pt-4">
-                    <Button 
-                      onClick={generateAnalysisPDF}
-                      variant="outline"
-                      className="flex items-center space-x-2"
+                    <PDFDownloadLink
+                      document={<ReportDocument analysisResult={analysisResult} repositoryStructure={repositoryStructure!} scoreScale={scoreScale} isDark={isDark} />}
+                      fileName={`analisis-repositorio-${(repositoryStructure?.name || 'repo').replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`}
                     >
-                      <Download className="h-4 w-4" />
-                      <span>Exportar Reporte (PDF)</span>
-                    </Button>
+                      {({ loading }) => (
+                        <Button variant="outline" className="flex items-center space-x-2" disabled={loading}>
+                          <Download className="h-4 w-4" />
+                          <span>{loading ? 'Generando...' : 'Exportar Reporte (PDF)'}</span>
+                        </Button>
+                      )}
+                    </PDFDownloadLink>
                   </div>
                 </CardContent>
               </Card>
@@ -1289,8 +1549,8 @@ export default function RepositoryAnalyzerPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {analysisResult.recommendations.map((recommendation, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                          <div key={index} className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-secondary text-foreground rounded-full flex items-center justify-center text-sm font-medium">
                             {index + 1}
                           </div>
                           <div className="flex-1 relative min-h-[60px]">
@@ -1309,8 +1569,8 @@ export default function RepositoryAnalyzerPage() {
                   <CardTitle>Prompt Utilizado</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">{analysisResult.prompt}</p>
+                  <div className="bg-muted border border-input p-4 rounded-lg">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{analysisResult.prompt}</p>
                   </div>
                 </CardContent>
               </Card>

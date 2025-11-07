@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { GitBranch, Users, BarChart3, Download, Calendar, FileText, GitCommit, ChevronDown, ChevronUp, ExternalLink, Star } from 'lucide-react';
+import Image from 'next/image';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -884,10 +885,12 @@ export default function GithubContributorsPage() {
                      checked={selectedContributors.has(contributor.login)}
                      onCheckedChange={() => toggleContributorSelection(contributor.login)}
                    />
-                   <img
+                   <Image
                      src={contributor.avatar_url}
                      alt={contributor.login}
-                     className="w-8 h-8 rounded-full"
+                     width={32}
+                     height={32}
+                     className="rounded-full"
                    />
                    <div className="flex-1 min-w-0">
                      <Label
@@ -1005,10 +1008,12 @@ export default function GithubContributorsPage() {
                   {contributorStats.slice(0, 5).map((stat) => (
                     <div key={stat.login} className="flex items-center gap-4 p-4 border rounded-lg">
                       <div className="flex items-center gap-3 flex-1">
-                        <img 
-                          src={stat.avatar_url} 
+                        <Image 
+                          src={stat.avatar_url}
                           alt={stat.login}
-                          className="w-10 h-10 rounded-full"
+                          width={40}
+                          height={40}
+                          className="rounded-full"
                         />
                         <div>
                           <p className="font-medium">{stat.login}</p>
@@ -1120,10 +1125,12 @@ export default function GithubContributorsPage() {
                 <Card key={stat.login}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                      <img 
+                      <Image 
                         src={stat.avatar_url} 
                         alt={stat.login}
-                        className="w-8 h-8 rounded-full"
+                        width={32}
+                        height={32}
+                        className="rounded-full"
                       />
                       <span>{stat.login}</span>
                       <Badge variant="outline">
@@ -1333,10 +1340,12 @@ export default function GithubContributorsPage() {
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center gap-3">
-                                <img
+                                <Image
                                   src={grade.avatar_url}
                                   alt={grade.login}
-                                  className="w-12 h-12 rounded-full"
+                                  width={48}
+                                  height={48}
+                                  className="rounded-full"
                                 />
                                 <div>
                                   <div className="flex items-center gap-2">

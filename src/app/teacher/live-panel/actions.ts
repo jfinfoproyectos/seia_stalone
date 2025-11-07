@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { nowUTC } from '@/lib/date-utils';
+import { LiveMessageBus } from '@/lib/live-message-bus';
+import { blockUser, unblockUser, isUserBlocked } from '@/lib/live-user-blocks';
 
 export interface LiveStudentData {
   id: number;
@@ -387,7 +389,7 @@ export async function getLiveStats() {
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
 
-    const submittedToday = await prisma.submission.count({
+  const submittedToday = await prisma.submission.count({
       where: {
         attempt: {
           evaluation: {
@@ -414,4 +416,133 @@ export async function getLiveStats() {
       submittedToday: 0
     };
   }
+}
+
+/**
+ * Envía un mensaje temporal a un estudiante activo durante una evaluación.
+ * El mensaje es efímero (en memoria) y no se persiste en la base de datos.
+ * Se direcciona por combinación de `uniqueCode` y `email` del estudiante.
+ */
+export async function sendTemporaryMessageToStudent(params: {
+  uniqueCode: string;
+  email: string;
+  content: string;
+}) {
+  const { uniqueCode, email, content } = params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+
+  if (!uniqueCode || !email || !content?.trim()) {
+    throw new Error('Parámetros inválidos');
+  }
+
+  // Componer clave del bus: única por estudiante dentro de la evaluación
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const msg = LiveMessageBus.publish(key, content, undefined, 'individual');
+  return { success: true, messageId: msg.id };
+}
+
+/**
+ * Envía un mensaje temporal a todos los estudiantes.
+ * Puede dirigirse a:
+ * - Todos los estudiantes de una evaluación (via evaluationId), o
+ * - Una lista explícita de destinatarios.
+ */
+export async function sendTemporaryMessageToAllStudents(params: {
+  content: string;
+  evaluationId?: number;
+  recipients?: Array<{ uniqueCode: string; email: string }>;
+}) {
+  const { content, evaluationId, recipients } = params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+
+  if (!content?.trim()) {
+    throw new Error('Contenido del mensaje inválido');
+  }
+
+  let targets: Array<{ uniqueCode: string; email: string }> = [];
+  try {
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      targets = recipients;
+    } else if (typeof evaluationId === 'number') {
+      const students = await getLiveStudents(evaluationId);
+      targets = students.map(s => ({ uniqueCode: s.uniqueCode, email: s.email }));
+    } else {
+      throw new Error('Debe proporcionar evaluationId o recipients');
+    }
+  } catch (e) {
+    console.error('Error al resolver destinatarios para broadcast:', e);
+    throw e;
+  }
+
+  let count = 0;
+  for (const t of targets) {
+    if (!t.uniqueCode || !t.email) continue;
+    const key = `${t.uniqueCode}|${t.email.toLowerCase()}`;
+    LiveMessageBus.publish(key, content, undefined, 'all');
+    count += 1;
+  }
+
+  return { success: true, sent: count };
+}
+
+/**
+ * Bloquea temporalmente a un estudiante (por minutos) usando un registro en memoria.
+ * Clave: `uniqueCode|email`.
+ */
+export async function blockStudent(params: {
+  uniqueCode: string;
+  email: string;
+  minutes?: number;
+}) {
+  const { uniqueCode, email, minutes = 10 } = params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+  if (!uniqueCode || !email) {
+    throw new Error('Parámetros inválidos');
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const rec = blockUser(key, minutes);
+  return { success: true, blockedUntil: rec.blockedUntil };
+}
+
+/**
+ * Desbloquea a un estudiante inmediatamente.
+ */
+export async function unblockStudent(params: { uniqueCode: string; email: string }) {
+  const { uniqueCode, email } = params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+  if (!uniqueCode || !email) {
+    throw new Error('Parámetros inválidos');
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const removed = unblockUser(key);
+  return { success: removed };
+}
+
+/**
+ * Consulta el estado de bloqueo de un estudiante.
+ */
+export async function getStudentBlockStatus(params: { uniqueCode: string; email: string }) {
+  const { uniqueCode, email } = params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('No autorizado');
+  }
+  if (!uniqueCode || !email) {
+    throw new Error('Parámetros inválidos');
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const { blocked, remainingMs } = isUserBlocked(key);
+  return { success: true, blocked, remainingMs };
 }

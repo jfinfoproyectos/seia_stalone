@@ -99,8 +99,8 @@ export default function RootLayout({
         <SessionWrapper>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="light"
+            enableSystem={false}
             disableTransitionOnChange
           >
             <TooltipProvider>

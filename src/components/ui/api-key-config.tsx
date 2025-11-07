@@ -19,12 +19,14 @@ interface ApiKeyConfigProps {
   title?: string;
   description?: string;
   className?: string;
+  onSaved?: () => void;
 }
 
 export function ApiKeyConfig({ 
   title = "Configuración de API Key de Gemini",
   description = "Configura tu API key personal de Google Gemini para usar las funciones de IA.",
-  className = ""
+  className = "",
+  onSaved
 }: ApiKeyConfigProps) {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
@@ -60,6 +62,10 @@ export function ApiKeyConfig({
 
       setApiKeyInStorage(apiKey.trim());
       setMessage({ type: 'success', text: 'API key guardada correctamente.' });
+      // Notificar al padre para cerrar el modal si se proporciona
+      try {
+        onSaved?.();
+      } catch {}
     } catch (error) {
       console.error('Error saving API key:', error);
       setMessage({ type: 'error', text: 'Error al guardar la API key. Inténtalo de nuevo.' });

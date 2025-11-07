@@ -40,6 +40,12 @@ export interface SelectedItem {
   selected: boolean;
 }
 
+export interface StudentInfo {
+  nombres?: string;
+  apellidos?: string;
+  grupo?: string;
+}
+
 export interface AnalysisResult {
   repositoryUrl: string;
   prompt: string;
@@ -50,6 +56,12 @@ export interface AnalysisResult {
   score?: number;
   analyzedAt: string;
   itemsAnalyzed: number;
+  // Datos opcionales del estudiante desde info.json
+  studentInfo?: {
+    nombres?: string;
+    apellidos?: string;
+    grupo?: string;
+  };
 }
 
 export interface AnalysisRequest {
@@ -57,6 +69,7 @@ export interface AnalysisRequest {
   selectedItems: SelectedItem[];
   customPrompt: string;
   includeContent: boolean;
+  scoreScale?: 'NONE' | 'TEN' | 'FIVE';
 }
 
 /**
@@ -280,7 +293,7 @@ export async function analyzeRepositoryElements(
   githubToken?: string
 ): Promise<AnalysisResult> {
   try {
-    const { repositoryStructure, selectedItems, customPrompt, includeContent } = analysisRequest;
+    const { repositoryStructure, selectedItems, customPrompt, includeContent, scoreScale } = analysisRequest;
     
     // Filtrar elementos seleccionados
     const selectedFiles = selectedItems.filter(item => item.selected && item.type === 'file');
@@ -349,18 +362,16 @@ IMPORTANTE: Cuando hagas referencia a archivos específicos en tu análisis, SIE
 
 Ejemplo: Si mencionas el archivo "src/main.js", escríbelo como: [src/main.js](${repositoryStructure.url}/blob/${repositoryStructure.defaultBranch}/src/main.js)
 
-Por favor, proporciona un análisis detallado que incluya:
+Proporciona:
 1. Análisis específico según el prompt personalizado
 2. Resumen ejecutivo del análisis
-3. Recomendaciones específicas (3-5 puntos)
-4. Una puntuación opcional del 0-10 si es aplicable según el contexto del prompt
+${scoreScale === 'NONE' ? '' : `3. Una puntuación opcional del ${scoreScale === 'FIVE' ? '0.0-5.0' : '0-10'} si es aplicable según el contexto del prompt`}
 
 Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
 {
-  "analysis": string, // Análisis detallado según el prompt personalizado (incluye enlaces a archivos cuando los menciones)
-  "summary": string, // Resumen ejecutivo (2-3 líneas)
-  "recommendations": string[], // Array de 3-5 recomendaciones específicas (incluye enlaces a archivos cuando sea relevante)
-  "score": number | null // Puntuación 0-10 si es aplicable, null si no
+  "analysis": string,
+  "summary": string,
+  "score": number | null
 }
 `;
 
@@ -376,6 +387,9 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
     if (jsonMatch) {
       try {
         const result = JSON.parse(jsonMatch[0]);
+
+        // Cargar info.json en la raíz si existe
+        const info = await fetchInfoJson(repositoryStructure.fullName, githubToken);
         
         return {
           repositoryUrl: repositoryStructure.url,
@@ -383,10 +397,11 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
           selectedItems,
           analysis: result.analysis || 'No se pudo generar análisis',
           summary: result.summary || 'No se pudo generar resumen',
-          recommendations: result.recommendations || [],
+          recommendations: [],
           score: result.score,
           analyzedAt: new Date().toISOString(),
-          itemsAnalyzed: selectedFiles.length + selectedDirectories.length
+          itemsAnalyzed: selectedFiles.length + selectedDirectories.length,
+          studentInfo: info || undefined,
         };
       } catch (error) {
         console.error('Error al parsear la respuesta JSON:', error);
@@ -589,4 +604,35 @@ export function getRepositoryStats(structure: RepositoryStructure) {
   };
   
   return stats;
+}
+
+// Intenta leer info.json desde la raíz del repositorio
+async function fetchInfoJson(repoFullName: string, githubToken?: string): Promise<{ nombres?: string; apellidos?: string; grupo?: string } | null> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+  };
+  if (githubToken) {
+    headers['Authorization'] = `token ${githubToken}`;
+  }
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${repoFullName}/contents/info.json`, { headers });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data && data.content) {
+      const decoded = decodeBase64Utf8(data.content);
+      try {
+        const parsed = JSON.parse(decoded);
+        return {
+          nombres: parsed.nombres,
+          apellidos: parsed.apellidos,
+          grupo: parsed.grupo,
+        };
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

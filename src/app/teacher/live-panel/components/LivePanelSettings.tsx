@@ -86,7 +86,7 @@ export function LivePanelSettings({
               onCheckedChange={onAutoRefreshChange}
             />
           </div>
-          <p className="text-xs text-gray-500">
+  <p className="text-xs text-muted-foreground">
             {autoRefresh 
               ? "Los datos se actualizan automáticamente" 
               : "Actualización manual únicamente"
@@ -122,7 +122,7 @@ export function LivePanelSettings({
             </SelectContent>
           </Select>
           {currentOption && (
-            <p className="text-xs text-gray-500">
+  <p className="text-xs text-muted-foreground">
               Actualización cada {currentOption.label.toLowerCase()} - {currentOption.description}
             </p>
           )}
@@ -142,7 +142,7 @@ export function LivePanelSettings({
                 onCheckedChange={onShowNotificationsChange}
               />
             </div>
-            <p className="text-xs text-gray-500">
+  <p className="text-xs text-muted-foreground">
               {showNotifications 
                 ? "Recibir alertas de nuevos estudiantes y cambios" 
                 : "Sin notificaciones"
@@ -157,7 +157,7 @@ export function LivePanelSettings({
             <Eye className="w-4 h-4 text-blue-500" />
             <span className="text-sm font-medium">Rendimiento</span>
           </div>
-          <div className="space-y-1 text-xs text-gray-600">
+  <div className="space-y-1 text-xs text-muted-foreground">
             <p>• Intervalos más cortos consumen más recursos</p>
             <p>• Se recomienda 5 segundos para uso normal</p>
             <p>• El panel se pausa cuando la pestaña no está visible</p>

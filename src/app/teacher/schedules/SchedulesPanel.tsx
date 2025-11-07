@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getAttempts, createAttempt, updateAttempt, deleteAttempt, generateAndGetScheduleAnalysis, getDetailedAttemptData } from './actions';
+import { getAttempts, createAttempt, updateAttempt, deleteAttempt, getDetailedAttemptData } from './actions';
 import { ScheduleForm } from './ScheduleForm';
 import { SchedulesTable } from './SchedulesTable';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { SubmissionsPanel } from './SubmissionsPanel';
 import { AttemptStatsPage } from './components/AttemptStatsPage';
 import { generatePdfReport } from '@/lib/pdf-generator';
 import { generateQuestionsPdf } from '@/lib/questions-pdf-generator';
-import { generateRiskPrediction, generateQuestionBiasAnalysis, generateParticipationAnalysis, generatePlagiarismAnalysis, wordMatchSimilarity, generatePersonalizedRecommendations, generateSentimentAnalysis, generateDifficultyHeatmap } from '@/lib/gemini-schedule-analysis';
+import { generateRiskPrediction, generateQuestionBiasAnalysis, generateParticipationAnalysis, generatePlagiarismAnalysis, wordMatchSimilarity, generatePersonalizedRecommendations, generateSentimentAnalysis, generateDifficultyHeatmap, generateScheduleAnalysis } from '@/lib/gemini-schedule-analysis';
+import { withApiKey } from '@/lib/gemini-service-wrapper';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -148,7 +149,44 @@ export function SchedulesPanel() {
     setIsGeneratingReport(id);
     try {
       const { attempt, questionAnalysis } = await getDetailedAttemptData(id);
-      const analysisResult = await generateAndGetScheduleAnalysis(id);
+      // Construir datos para el análisis general con Gemini en el cliente
+      const stats = {
+        totalSubmissions: attempt.submissions.length,
+        averageScore:
+          attempt.submissions.filter((s) => s.score !== null).length > 0
+            ? attempt.submissions
+                .filter((s) => s.score !== null)
+                .reduce((acc, s) => acc + (s.score || 0), 0) /
+              attempt.submissions.filter((s) => s.score !== null).length
+            : 0,
+        gradeDistribution: [
+          { name: 'Excelente (4.5-5.0)', value: attempt.submissions.filter((s) => s.score !== null && (s.score || 0) >= 4.5).length },
+          { name: 'Muy Bueno (4.0-4.4)', value: attempt.submissions.filter((s) => s.score !== null && (s.score || 0) >= 4.0 && (s.score || 0) < 4.5).length },
+          { name: 'Bueno (3.5-3.9)', value: attempt.submissions.filter((s) => s.score !== null && (s.score || 0) >= 3.5 && (s.score || 0) < 4.0).length },
+          { name: 'Regular (3.0-3.4)', value: attempt.submissions.filter((s) => s.score !== null && (s.score || 0) >= 3.0 && (s.score || 0) < 3.5).length },
+          { name: 'Insuficiente (0.0-2.9)', value: attempt.submissions.filter((s) => s.score !== null && (s.score || 0) < 3.0).length },
+          { name: 'Sin calificar', value: attempt.submissions.filter((s) => s.score === null).length },
+        ].filter((item) => item.value > 0),
+      };
+
+      const submissionSummaries = attempt.submissions.map((s) => ({
+        studentName: `${s.firstName} ${s.lastName}`,
+        score: s.score,
+      }));
+
+      const questionAnalysisSummaries = questionAnalysis.map((qa) => ({
+        questionText: qa.text,
+        averageScore: qa.averageScore,
+        questionType: qa.type,
+      }));
+
+      const analysisResult = await withApiKey(
+        generateScheduleAnalysis,
+        attempt.evaluation.title,
+        stats,
+        submissionSummaries,
+        questionAnalysisSummaries,
+      );
 
       // Solo calcular stdDev si la tabla de análisis por pregunta está seleccionada
       let questionStats: { questionText: string; averageScore: number; stdDev: number }[] = [];
@@ -181,10 +219,10 @@ export function SchedulesPanel() {
           studentName: `${s.firstName} ${s.lastName}`,
           score: s.score,
         }));
-        riskPrediction = await generateRiskPrediction(attempt.evaluation.title, submissions);
+        riskPrediction = await withApiKey(generateRiskPrediction, attempt.evaluation.title, submissions);
       }
       if (sections.bias) {
-        questionBias = await generateQuestionBiasAnalysis(questionStats);
+        questionBias = await withApiKey(generateQuestionBiasAnalysis, questionStats);
       }
       if (sections.participation) {
         const participationData = attempt.submissions.map(s => {
@@ -197,7 +235,7 @@ export function SchedulesPanel() {
             durationInMinutes: durationInMinutes,
           };
         });
-        participationAnalysis = await generateParticipationAnalysis(participationData);
+        participationAnalysis = await withApiKey(generateParticipationAnalysis, participationData);
       }
       if (sections.plagiarism) {
         // Validar si hay preguntas de texto
@@ -240,7 +278,7 @@ export function SchedulesPanel() {
           }
         }
         if (plagiarismPairsText.length > 0) {
-          plagiarismAnalysisText = await generatePlagiarismAnalysis(plagiarismPairsText);
+          plagiarismAnalysisText = await withApiKey(generatePlagiarismAnalysis, plagiarismPairsText);
         }
       }
       if (sections.personalized) {
@@ -254,7 +292,7 @@ export function SchedulesPanel() {
             number: idx + 1,
           })),
         }));
-        personalizedRecommendations = await generatePersonalizedRecommendations(studentsData);
+        personalizedRecommendations = await withApiKey(generatePersonalizedRecommendations, studentsData);
       }
       if (sections.sentiment) {
         // Recolectar todas las respuestas de texto
@@ -279,14 +317,17 @@ export function SchedulesPanel() {
           setIsGeneratingReport(null);
           return;
         }
-        sentimentAnalysis = await generateSentimentAnalysis(textResponses);
+        sentimentAnalysis = await withApiKey(generateSentimentAnalysis, textResponses);
       }
       if (sections.difficultyHeatmap) {
         if (questionAnalysis.length > 0) {
-          difficultyHeatmap = await generateDifficultyHeatmap(questionAnalysis.map(q => ({
-            text: q.text,
-            averageScore: q.averageScore,
-          })));
+          difficultyHeatmap = await withApiKey(
+            generateDifficultyHeatmap,
+            questionAnalysis.map(q => ({
+              text: q.text,
+              averageScore: q.averageScore,
+            }))
+          );
         }
       }
 

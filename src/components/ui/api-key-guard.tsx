@@ -72,6 +72,7 @@ export function ApiKeyGuard({
               title="Configura tu API Key"
               description="Esta API key se almacenará localmente en tu navegador y será necesaria para usar las funciones de IA."
               className="border-0 shadow-none"
+              onSaved={() => setIsModalOpen(false)}
             />
           </DialogContent>
         </Dialog>

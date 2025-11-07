@@ -78,13 +78,13 @@ export function LiveStatsCards({ className }: LiveStatsCardsProps) {
           <div className="flex items-center space-x-2">
             <div className="text-2xl font-bold">
               {loading ? (
-                <div className="h-8 w-12 bg-gray-200 animate-pulse rounded" />
+                <div className="h-8 w-12 bg-muted animate-pulse rounded" />
               ) : (
                 stats.activeStudents
               )}
             </div>
             {stats.activeStudents > 0 && (
-              <Badge variant="secondary" className="bg-blue-500 text-white">
+              <Badge variant="secondary" className="bg-primary text-primary-foreground">
                 <div className="w-2 h-2 bg-background rounded-full mr-1 animate-pulse" />
                 Online
               </Badge>
@@ -95,7 +95,7 @@ export function LiveStatsCards({ className }: LiveStatsCardsProps) {
           </p>
         </CardContent>
         {stats.activeStudents > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 animate-pulse" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary animate-pulse" />
         )}
       </Card>
 
@@ -111,7 +111,7 @@ export function LiveStatsCards({ className }: LiveStatsCardsProps) {
           <div className="flex items-center space-x-2">
             <div className="text-2xl font-bold">
               {loading ? (
-                <div className="h-8 w-12 bg-gray-200 animate-pulse rounded" />
+                <div className="h-8 w-12 bg-muted animate-pulse rounded" />
               ) : (
                 stats.submittedToday
               )}

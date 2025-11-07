@@ -110,7 +110,7 @@ export default function StudentEntryPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="firstName">Nombre</Label>
+              <Label htmlFor="firstName">Nombres</Label>
               <Input
                 id="firstName"
                 placeholder="Ingresa tu nombre"
@@ -120,7 +120,7 @@ export default function StudentEntryPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName">Apellido</Label>
+              <Label htmlFor="lastName">Apellidos</Label>
               <Input
                 id="lastName"
                 placeholder="Ingresa tu apellido"

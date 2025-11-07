@@ -160,7 +160,7 @@ export default function LivePanelPage() {
               <CardContent>
                 {students.length === 0 ? (
                   <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No hay actividad reciente</p>
                   </div>
                 ) : (
@@ -222,7 +222,7 @@ export default function LivePanelPage() {
                 <Card>
                   <CardContent className="flex items-center justify-center py-12">
                     <div className="text-center">
-                      <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+      <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
                         Selecciona una evaluación para ver los estudiantes
                       </p>
@@ -245,7 +245,7 @@ export default function LivePanelPage() {
         <Card className="p-3">
           <div className="flex items-center gap-2 text-sm">
             <div className={`w-2 h-2 rounded-full ${
-              autoRefresh ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+            autoRefresh ? 'bg-green-500 dark:bg-green-600 animate-pulse' : 'bg-muted'
             }`} />
             <span className="text-muted-foreground">
               {autoRefresh ? 'Actualizando automáticamente' : 'Actualización pausada'}

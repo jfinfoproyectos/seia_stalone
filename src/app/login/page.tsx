@@ -99,7 +99,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-3 p-3 rounded-full bg-primary/10">
                 <PenTool className="h-8 w-8 text-primary" />
                 <span className="font-bold text-2xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  SEIAC
+                  SEIA
                 </span>
               </div>
             </div>

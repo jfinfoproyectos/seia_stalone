@@ -82,6 +82,7 @@ export function ApiKeyButton({ className = "", isOpen, onOpenChange }: ApiKeyBut
           title=""
           description="Esta API key se almacenará localmente en tu navegador y será necesaria para obtener retroalimentación de IA en tus respuestas."
           className="border-0 shadow-none"
+          onSaved={() => setIsDialogOpen(false)}
         />
       </DialogContent>
     </Dialog>

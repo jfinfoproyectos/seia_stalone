@@ -4,6 +4,8 @@
 import { revalidatePath } from 'next/cache';
 import { nowUTC, isBeforeUTC, isAfterUTC } from '@/lib/date-utils';
 import { prisma } from '@/lib/prisma';
+import { LiveMessageBus, LiveMessage } from '@/lib/live-message-bus';
+import { isUserBlocked } from '@/lib/live-user-blocks';
 
 // Tipo para las respuestas del estudiante
 type StudentAnswer = {
@@ -496,4 +498,58 @@ export async function submitEvaluation(submissionId: number) {
       : 'Error desconocido al enviar la evaluación';
     return { success: false, error: errorMessage };
   }
+}
+
+/**
+ * Obtiene mensajes efímeros dirigidos al estudiante (por uniqueCode + email).
+ * Los mensajes se consumen (se remueven) al obtenerlos para evitar repeticiones.
+ */
+export async function getLiveStudentMessages(params: { uniqueCode: string; email: string }) {
+  const { uniqueCode, email } = params;
+  if (!uniqueCode || !email) {
+    return { success: false, error: 'Parámetros inválidos' };
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const messages: LiveMessage[] = LiveMessageBus.consume(key);
+  return { success: true, messages };
+}
+
+/**
+ * Observa (sin consumir) los mensajes efímeros del estudiante.
+ * Útil para polling en cliente y evitar perder mensajes cuando el modal está abierto.
+ */
+export async function peekLiveStudentMessages(params: { uniqueCode: string; email: string }) {
+  const { uniqueCode, email } = params;
+  if (!uniqueCode || !email) {
+    return { success: false, error: 'Parámetros inválidos' };
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const messages: LiveMessage[] = LiveMessageBus.peek(key);
+  return { success: true, messages };
+}
+
+/**
+ * Reconoce (elimina) un mensaje específico del bus.
+ */
+export async function ackLiveStudentMessage(params: { uniqueCode: string; email: string; id: string }) {
+  const { uniqueCode, email, id } = params;
+  if (!uniqueCode || !email || !id) {
+    return { success: false, error: 'Parámetros inválidos' };
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const removed = LiveMessageBus.ack(key, id);
+  return { success: removed };
+}
+
+/**
+ * Consulta estado de bloqueo del estudiante (en memoria) por `uniqueCode|email`.
+ */
+export async function getStudentBlockStatus(params: { uniqueCode: string; email: string }) {
+  const { uniqueCode, email } = params;
+  if (!uniqueCode || !email) {
+    return { success: false, error: 'Parámetros inválidos' };
+  }
+  const key = `${uniqueCode}|${email.toLowerCase()}`;
+  const status = isUserBlocked(key);
+  return { success: true, blocked: status.blocked, remainingMs: status.remainingMs };
 }
