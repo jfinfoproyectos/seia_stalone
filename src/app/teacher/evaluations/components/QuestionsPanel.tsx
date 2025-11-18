@@ -238,9 +238,9 @@ export function QuestionsPanel({ evaluationId }: QuestionsPanelProps) {
                         }
                       }}
                       disabled={preguntas.findIndex(p => p.id === previewPregunta.id) === 0}
-                      className="group flex items-center gap-2 px-4 py-2.5 bg-background/80 hover:bg-background border border-border/50 hover:border-border rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/80"
+                      className="group flex items-center gap-2 px-4 py-2.5 bg-muted/30 hover:bg-muted/40 text-foreground/90 border border-border/50 hover:border-border rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
-                      <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                       <span className="text-sm font-medium">Anterior</span>
@@ -254,10 +254,10 @@ export function QuestionsPanel({ evaluationId }: QuestionsPanelProps) {
                         }
                       }}
                       disabled={preguntas.findIndex(p => p.id === previewPregunta.id) === preguntas.length - 1}
-                      className="group flex items-center gap-2 px-4 py-2.5 bg-background/80 hover:bg-background border border-border/50 hover:border-border rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background/80"
+                      className="group flex items-center gap-2 px-4 py-2.5 bg-muted/30 hover:bg-muted/40 text-foreground/90 border border-border/50 hover:border-border rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <span className="text-sm font-medium">Siguiente</span>
-                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>

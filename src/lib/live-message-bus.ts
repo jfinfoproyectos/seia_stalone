@@ -24,7 +24,6 @@ const DEFAULT_TTL_MS = 90_000; // 90s retention to tolerate polling and countdow
 declare global {
   // Augment the global object with our in-memory bus instance
   // This avoids using `any` and keeps the type safe
-  // eslint-disable-next-line no-var
   var __liveMessageBus: Map<string, MessageBucket> | undefined;
 }
 

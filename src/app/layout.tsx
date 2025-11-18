@@ -83,7 +83,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`
+    <html lang="en" data-theme="blue" suppressHydrationWarning className={`
       ${geistSans.variable} 
       ${geistMono.variable} 
       ${outfitFont.variable} 

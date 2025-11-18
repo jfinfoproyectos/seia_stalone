@@ -29,7 +29,7 @@ const MonacoEditor = dynamic(
 
 interface CodeEditorProps {
   value: string;
-  onChange: (value: string, element?: HTMLElement) => void;
+  onChange: (value: string) => void;
   language: string;
   height?: string;
 }
@@ -55,9 +55,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
   // Función para manejar cambios
   const handleChange = (newValue: string) => {
     try {
-      // Obtener el elemento DOM del editor Monaco
-      const editorElement = editorRef.current?.getDomNode();
-      onChange(newValue, editorElement || undefined);
+      onChange(newValue);
     } catch (error) {
       console.error('[CodeEditor] Error en handleChange:', error);
       setEditorError('Error al procesar el cambio en el editor');
@@ -154,91 +152,90 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
                 }
               };
 
-              // Configurar opciones del editor permitiendo copy/paste y acciones por defecto
+              // Configurar opciones del editor con restricciones de pegar
               editor.updateOptions({ 
-                contextmenu: true,
+                // Deshabilitar menú contextual completamente para evitar pegar
+                contextmenu: false,
+                // Habilitar selección múltiple
                 multiCursorModifier: 'ctrlCmd',
-                dragAndDrop: true,
-                // Asegurar editor interactivo
-                readOnly: false,
+                // Deshabilitar drag and drop para evitar pegar archivos
+                dragAndDrop: false,
               });
 
-              // Reforzar periódicamente que copy/paste no sea bloqueado por scripts externos
-              const reinforceCopyPaste = () => {
+              // No sobrescribimos métodos internos del editor para evitar efectos colaterales
+
+              // Deshabilitar acciones específicas del editor
+              const pasteActions = [
+                'editor.action.clipboardPasteAction',
+                'editor.action.paste',
+                'paste'
+              ];
+
+              pasteActions.forEach(actionId => {
                 try {
-                  editor.updateOptions({ contextmenu: true, dragAndDrop: true });
-                  const dom = editor.getDomNode();
-                  if (dom) {
-                    // Limpiar posibles handlers que bloqueen
-                    dom.onpaste = null;
-                    dom.oncopy = null;
-                    dom.oncut = null;
-                    const ta = dom.querySelector('textarea') as HTMLTextAreaElement | null;
-                    if (ta) {
-                      ta.onpaste = null;
-                      ta.oncopy = null;
-                      ta.oncut = null;
-                      ta.disabled = false;
-                    }
+                  const action = editor.getAction(actionId);
+                  if (action) {
+                    action.run = () => {
+                      console.warn('[CodeEditor] Acción de pegar bloqueada:', actionId);
+                      return Promise.resolve();
+                    };
                   }
-                  // Nivel documento
-                  document.onpaste = null;
-                  document.oncopy = null;
-                  document.oncut = null;
-                } catch {
-                  // Silencioso
+                } catch (error) {
+                  console.warn('[CodeEditor] No se pudo deshabilitar la acción:', actionId, error);
                 }
-              };
-              // Ejecutar inmediatamente y de forma periódica
-              reinforceCopyPaste();
-              const reinforceIntervalId = window.setInterval(reinforceCopyPaste, 2000);
+              });
 
-              // Event listeners para asegurar propagación y evitar bloqueos de copy/paste
+              // Event listeners para bloquear eventos de pegar
               const editorDomNode = editor.getDomNode();
-              const stopCapture = (e: Event) => {
-                // No prevenir acción por defecto; solo detener otros listeners
-                if (e && typeof e.stopImmediatePropagation === 'function') {
-                  e.stopImmediatePropagation();
-                } else if (e) {
-                  e.stopPropagation();
-                }
-              };
-
               if (editorDomNode) {
-                editorDomNode.addEventListener('copy', stopCapture, true);
-                editorDomNode.addEventListener('paste', stopCapture, true);
-                editorDomNode.addEventListener('cut', stopCapture, true);
+                // Bloquear eventos de pegar en el DOM
+                const preventPaste = (e: Event) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.warn('[CodeEditor] Evento de pegar bloqueado');
+                  return false;
+                };
+
+                const preventDrop = (e: DragEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.warn('[CodeEditor] Evento de drop bloqueado');
+                  return false;
+                };
+
+                const preventKeyboardPaste = (e: KeyboardEvent) => {
+                  // Bloquear Ctrl+V, Ctrl+Shift+V, Shift+Insert
+                  if ((e.ctrlKey && e.key === 'v') || 
+                      (e.ctrlKey && e.shiftKey && e.key === 'V') ||
+                      (e.shiftKey && e.key === 'Insert')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.warn('[CodeEditor] Atajo de teclado para pegar bloqueado');
+                    return false;
+                  }
+                };
+
+                // Agregar event listeners
+                editorDomNode.addEventListener('paste', preventPaste, true);
+                editorDomNode.addEventListener('drop', preventDrop, true);
+                editorDomNode.addEventListener('dragover', preventDrop, true);
+                editorDomNode.addEventListener('keydown', preventKeyboardPaste, true);
+
+                // También bloquear en el contenedor del editor
                 const textArea = editorDomNode.querySelector('textarea');
                 if (textArea) {
-                  textArea.addEventListener('copy', stopCapture, true);
-                  textArea.addEventListener('paste', stopCapture, true);
-                  textArea.addEventListener('cut', stopCapture, true);
+                  textArea.addEventListener('paste', preventPaste, true);
+                  textArea.addEventListener('drop', preventDrop, true);
+                  textArea.addEventListener('keydown', preventKeyboardPaste, true);
                 }
+
               }
 
               editor.layout();
 
               window.addEventListener('resize', updateEditorOptions);
               
-              // Retornar función de cleanup: resize, refuerzo y listeners
-              return () => {
-                window.removeEventListener('resize', updateEditorOptions);
-                // Limpiar intervalo de refuerzo
-                try { window.clearInterval(reinforceIntervalId); } catch {}
-                // Cleanup de event listeners de refuerzo
-                const dom = editor.getDomNode();
-                if (dom) {
-                  dom.removeEventListener('copy', stopCapture, true);
-                  dom.removeEventListener('paste', stopCapture, true);
-                  dom.removeEventListener('cut', stopCapture, true);
-                  const ta = dom.querySelector('textarea');
-                  if (ta) {
-                    ta.removeEventListener('copy', stopCapture, true);
-                    ta.removeEventListener('paste', stopCapture, true);
-                    ta.removeEventListener('cut', stopCapture, true);
-                  }
-                }
-              };
+              // Nota: onMount no gestiona ciclo de vida; cleanup se realiza al desmontar el componente React
             } catch (error) {
               console.error('[CodeEditor] Error en onMount:', error);
               handleEditorError(error);

@@ -13,13 +13,13 @@ import { AlertCircle, CheckCircle, Clock, HelpCircle, Loader2, Send, Sparkles, X
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import ThemeToggle from '@/components/theme/ThemeToggle'
+import ThemePaletteDots from '@/components/theme/ThemePaletteDots'
 import { cn } from '@/lib/utils'
 
 // Servicios para evaluar con Gemini AI
 import { getAIFeedback } from '@/lib/gemini-code-evaluation';
 import { evaluateTextResponse } from '@/lib/gemini-text-evaluation';
-import { useApiKeyRequired } from '@/components/ui/api-key-guard';
-import { removeApiKeyFromStorage } from '@/lib/apiKeyService';
+import { getApiKeyFromStorage } from '@/lib/apiKeyService';
 
 // Tipos para los modelos de datos
 type Question = {
@@ -67,10 +67,10 @@ import { QuestionNavigator } from '../components/QuestionNavigator';
 import { MarkdownViewer } from './components/markdown-viewer';
 import { CodeEditor } from './components/code-editor';
 import { Textarea } from '@/components/ui/textarea';
-import { ApiKeyButton } from './components/ApiKeyButton';
+// API key se configura en la página de ingreso; no se muestra botón aquí
 
 import { PunishmentModal } from './components/PunishmentModal';
-import { TeacherMessageModal } from './components/TeacherMessageModal';
+
 
 export default function StudentEvaluationPage() {
   return (
@@ -88,7 +88,7 @@ function EvaluationContent() {
   
   // Usar el hook para manejar datos del estudiante
   const { email, firstName, lastName, isDataLoaded } = useStudentData();
-  const { apiKey } = useApiKeyRequired();
+  // La API key se obtendrá desde almacenamiento cuando se requiera
 
   // Estado para la evaluación y respuestas (declarado temprano para uso en callbacks)
   const [evaluation, setEvaluation] = useState<EvaluationData | null>(null);
@@ -104,7 +104,7 @@ function EvaluationContent() {
   const [submissionId, setSubmissionId] = useState<number | null>(null);
   const [isEvaluationExpired, setIsEvaluationExpired] = useState(false);
   const [isPageHidden, setIsPageHidden] = useState(false);
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  // Eliminado el estado del diálogo de API key; manejo centralizado en la página de ingreso
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [isPunishmentModalOpen, setIsPunishmentModalOpen] = useState(false);
@@ -152,21 +152,21 @@ function EvaluationContent() {
     enabled: false // Deshabilitado para usar solo el contador
   });
 
-  // Usar el hook para contar cambios de pestaña y redirigir cada 3 cambios
+  // Usar el hook para contar cambios de pestaña y redirigir inmediatamente al primer cambio
   useTabSwitchCounter({
     enabled: true,
     onTabSwitch: (count) => {
-      console.log(`[Tab Switch Counter] Cambios de pestaña: ${count}`);
-      // Cada 3 cambios, no bloquear: redirigir a la ventana de ingreso de código
-      if (count % 3 === 0) {
-        try {
-          // Limpia estado de pausa y contador para la próxima sesión
-          localStorage.removeItem('securityPauseState');
-          localStorage.removeItem('tabSwitchCount');
-        } catch {}
-        console.warn('[Security] 3 cambios de pestaña detectados - redirigiendo a la página de entrada');
-        router.push('/student');
-      }
+      console.log(`[Tab Switch Counter] Cambio de pestaña detectado (total: ${count}). Redirigiendo...`);
+      try {
+        // Registrar motivo de redirección para avisar en la entrada del estudiante
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('redirectReason', 'tab-switch');
+        }
+        // Limpiar estado de pausa y contador para evitar persistencia entre sesiones
+        localStorage.removeItem('securityPauseState');
+        localStorage.removeItem('tabSwitchCount');
+      } catch {}
+      router.push('/student');
     }
     // No proveer onPunishmentTrigger para evitar el modal de bloqueo
   });
@@ -290,13 +290,7 @@ function EvaluationContent() {
       return;
     }
 
-    // Borrar la API key de Gemini cada vez que el estudiante ingrese a la evaluación
-    try {
-      removeApiKeyFromStorage();
-      console.log('[Security] API key de Gemini eliminada al ingresar a la evaluación');
-    } catch (error) {
-      console.error('[Security] Error al eliminar API key de Gemini:', error);
-    }
+    // La API key guardada se usará durante la evaluación; no se elimina aquí
 
     if (!uniqueCode || !email || !firstName || !lastName) {
       console.error('Código de evaluación o datos del estudiante incompletos')
@@ -536,10 +530,12 @@ function EvaluationContent() {
   const evaluateCurrentAnswer = async () => {
     if (!evaluation || !submissionId) return
 
-    if (!apiKey) {
-      console.error('API Key no configurada')
-      setIsApiKeyDialogOpen(true)
-      return
+    const storedApiKey = getApiKeyFromStorage();
+    if (!storedApiKey) {
+      console.error('API Key no configurada');
+      setErrorMessage('API key de Gemini no configurada. Ingresa tu API key en la página de ingreso.');
+      router.push('/student');
+      return;
     }
 
     const currentQuestion = evaluation.questions[currentQuestionIndex]
@@ -565,7 +561,7 @@ function EvaluationContent() {
           currentAnswer.answer,
           currentQuestion.text,
           language,
-          apiKey
+          storedApiKey
         )
 
         // Contador de evaluaciones retirado
@@ -620,7 +616,7 @@ function EvaluationContent() {
         const result = await evaluateTextResponse(
           currentAnswer.answer,
           currentQuestion.text,
-          apiKey
+          storedApiKey
         )
 
         // Contador de evaluaciones retirado
@@ -891,8 +887,7 @@ function EvaluationContent() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background overflow-hidden" style={{ zIndex: 1, position: 'relative' }}>
-      {/* Modal de mensajes del profesor con espera forzada de 60s */}
-      <TeacherMessageModal uniqueCode={uniqueCode || ''} email={email || ''} />
+           
       {/* Barra superior con información y controles - Mejorada distribución y responsividad */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center p-2 bg-card shadow-md flex-shrink-0 border-b gap-2 min-h-[3rem]">
         
@@ -965,19 +960,20 @@ function EvaluationContent() {
             
             {/* Pantalla completa eliminada */}
             
-            <ApiKeyButton 
-              className="flex-shrink-0 h-7 w-7" 
-              isOpen={isApiKeyDialogOpen}
-              onOpenChange={setIsApiKeyDialogOpen}
-            />
+            {/* Configuración de API key removida de la evaluación */}
             
             
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div><ThemeToggle className="flex-shrink-0" /></div>
+                  <div className="flex items-center gap-2">
+                    <ThemeToggle className="flex-shrink-0" />
+                    <div className="hidden sm:flex">
+                      <ThemePaletteDots />
+                    </div>
+                  </div>
                 </TooltipTrigger>
-                <TooltipContent className="text-xs">Cambiar tema</TooltipContent>
+                <TooltipContent className="text-xs">Cambiar tema y paleta</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/theme/ThemeToggle';
+import ThemePaletteDots from '@/components/theme/ThemePaletteDots';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Home, FileText, Calendar, Settings, PanelLeftClose, Menu, PenTool, Wrench, Monitor } from 'lucide-react';
 import '@/app/globals.css';
@@ -86,6 +87,7 @@ export function TeacherPanel({ children }: { children: React.ReactNode }) {
             <h1 className="text-lg font-semibold text-primary">Profesor</h1>
             <div className="ml-auto flex items-center gap-4">
               <ThemeToggle />
+              <ThemePaletteDots className="hidden sm:flex" />
               <UserMenu />
             </div>
           </header>
