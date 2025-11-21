@@ -97,8 +97,8 @@ export default function Home() {
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl">
               SEIA es la plataforma integral para evaluaciones académicas. <br />
-              <span className="font-semibold text-primary">Estudiantes:</span> Descargan la aplicación dedicada para presentar evaluaciones de forma segura con el código único proporcionado por su profesor.<br />
-              <span className="font-semibold text-primary">Profesores y Administradores:</span> Inician sesión para crear, gestionar y analizar evaluaciones, controlar intentos y obtener reportes detallados.
+              <span className="font-semibold text-primary">Estudiantes:</span> ingresan desde su navegador y presentan evaluaciones de forma segura usando el código único proporcionado por su profesor.<br />
+              <span className="font-semibold text-primary">Profesores y Administradores:</span> inician sesión para crear, gestionar y analizar evaluaciones, controlar intentos y obtener reportes detallados.
             </p>
             <div className="flex flex-wrap gap-4 pt-4">
               <Button size="lg" className="rounded-full px-8 blur-effect group" asChild>
@@ -140,7 +140,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-primary">Para Estudiantes</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Descarga la aplicación dedicada, ingresa tu código único y presenta tus evaluaciones en un entorno seguro con retroalimentación inmediata.
+                  Ingresa a la plataforma desde tu navegador, introduce tu código único y presenta tus evaluaciones en un entorno seguro con retroalimentación inmediata.
                 </p>
               </div>
             </div>
@@ -183,8 +183,8 @@ export default function Home() {
               </div>
               <div className="pt-6">
                 <Code className="h-10 w-10 text-primary" />
-                <h3 className="text-xl font-bold mt-4 mb-2">Estudiantes: Descarga la Aplicación</h3>
-                <p className="text-muted-foreground">Descarga la aplicación dedicada e introduce el código único proporcionado por tu profesor para acceder a la evaluación de forma segura.</p>
+                <h3 className="text-xl font-bold mt-4 mb-2">Estudiantes: Ingresa a la Plataforma</h3>
+                <p className="text-muted-foreground">Accede desde cualquier navegador e introduce el código único proporcionado por tu profesor para presentar la evaluación de forma segura.</p>
               </div>
             </div>
             {/* Paso 2 */}
@@ -215,7 +215,7 @@ export default function Home() {
         <section className="py-16 px-8 bg-primary/10 rounded-3xl text-center space-y-8 fade-in">
           <h2 className="text-3xl md:text-4xl font-bold">¿Listo para tu evaluación?</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Descarga la aplicación para estudiantes y presenta tus evaluaciones de forma segura.
+            Accede desde tu navegador y presenta tus evaluaciones de forma segura.
           </p>
           <div className="flex flex-wrap gap-4 justify-center pt-4">
             <Button size="lg" className="rounded-full px-8 blur-effect" asChild>
