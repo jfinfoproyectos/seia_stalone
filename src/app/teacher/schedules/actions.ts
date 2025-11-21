@@ -2,9 +2,24 @@
 
 import { generateScheduleAnalysis, ScheduleAnalysisResult } from '@/lib/gemini-schedule-analysis';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
+
+async function getUserFromSession() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Usuario no autenticado');
+  const user = await prisma.user.findUnique({ where: { id: parseInt(session.user.id) } });
+  if (!user) throw new Error('Usuario no encontrado en la base de datos');
+  return user;
+}
 
 export async function getAttempts() {
+  const user = await getUserFromSession();
   return await prisma.attempt.findMany({
+    where: {
+      evaluation: {
+        is: { authorId: user.id },
+      },
+    },
     include: { 
       evaluation: true,
       _count: {
