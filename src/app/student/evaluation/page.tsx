@@ -511,7 +511,7 @@ function EvaluationContent() {
           if (typeof errorDetails === 'object') {
             try {
               errorDetails = JSON.stringify(errorDetails);
-            } catch (e) {
+            } catch {
               errorDetails = 'Error desconocido';
             }
           }

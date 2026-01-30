@@ -99,7 +99,7 @@ export function ApiKeyConfig({
       } else {
         setMessage({ type: 'error', text: 'Error al eliminar la API key.' });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error al eliminar.' });
     } finally {
       setIsLoading(false);

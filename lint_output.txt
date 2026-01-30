@@ -1,0 +1,12 @@
+
+> seia@1.0.0 lint
+> next lint
+
+
+./src/app/student/evaluation/page.tsx
+514:22  Error: '_e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/ui/api-key-config.tsx
+102:14  Error: '_error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

@@ -19,7 +19,12 @@ export async function evaluateAnswerWithAI(
     feedback: string;
     isCorrect: boolean;
     remainingAttempts: number;
-    answer: any;
+    answer: {
+        id: number;
+        score: number | null;
+        answer: string;
+        supportAttempts: number;
+    };
 } | {
     success: false;
     error: string;
@@ -142,7 +147,11 @@ export async function evaluateAnswerWithAI(
         }
 
         // Preparar datos para actualización
-        const updateData: any = {
+        const updateData: {
+            supportAttempts: { increment: number };
+            answer?: string;
+            score?: number;
+        } = {
             supportAttempts: {
                 increment: 1
             }

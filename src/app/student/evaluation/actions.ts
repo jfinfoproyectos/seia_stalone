@@ -6,8 +6,7 @@ import { nowUTC, isBeforeUTC, isAfterUTC } from '@/lib/date-utils';
 import { prisma } from '@/lib/prisma';
 import { LiveMessageBus, LiveMessage } from '@/lib/live-message-bus';
 import { isUserBlocked } from '@/lib/live-user-blocks';
-import { evaluateStudentCode } from '@/lib/gemini-code-evaluation';
-import { evaluateTextResponse } from '@/lib/gemini-text-evaluation';
+
 
 // Tipo para las respuestas del estudiante
 type StudentAnswer = {
