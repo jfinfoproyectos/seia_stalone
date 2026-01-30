@@ -32,10 +32,11 @@ function normalizeEvaluation(ev: unknown): Evaluation {
     helpUrl: e.helpUrl ?? '',
     createdAt: toISOStringSafe(e.createdAt),
     updatedAt: toISOStringSafe(e.updatedAt),
+    maxSupportAttempts: e.maxSupportAttempts ?? 3,
   };
 }
 
-export function EvaluationsPanel({ 
+export function EvaluationsPanel({
   initialEvaluations,
   evaluationLimit,
   evaluationCount
@@ -49,7 +50,7 @@ export function EvaluationsPanel({
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [error, setError] = useState('');
-  
+
   const hasReachedLimit = currentEvaluationCount >= evaluationLimit;
 
   const handleCreate = () => {
@@ -79,20 +80,20 @@ export function EvaluationsPanel({
 
   const cancelDelete = () => setDeleteId(null);
 
-  const handleSubmit = (data: { title: string; description?: string; helpUrl?: string }) => {
+  const handleSubmit = (data: { title: string; description?: string; helpUrl?: string; maxSupportAttempts?: number }) => {
     startTransition(async () => {
       try {
         setError(''); // Limpiar errores previos
-      if (editing) {
-        const updated = normalizeEvaluation(await updateEvaluacion(editing.id, data));
-        setEvaluations(evaluations.map(ev => (ev.id === editing.id ? updated : ev)));
-      } else {
-        const created = normalizeEvaluation(await createEvaluacion(data));
-        setEvaluations([created, ...evaluations]);
+        if (editing) {
+          const updated = normalizeEvaluation(await updateEvaluacion(editing.id, data));
+          setEvaluations(evaluations.map(ev => (ev.id === editing.id ? updated : ev)));
+        } else {
+          const created = normalizeEvaluation(await createEvaluacion(data));
+          setEvaluations([created, ...evaluations]);
           setCurrentEvaluationCount(count => count + 1);
-      }
-      setShowForm(false);
-      setEditing(null);
+        }
+        setShowForm(false);
+        setEditing(null);
       } catch (e) {
         if (e instanceof Error) {
           setError(e.message);
@@ -173,7 +174,7 @@ export function EvaluationsPanel({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-    <div>
+                <div>
                   <Button onClick={handleCreate} disabled={hasReachedLimit}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación
                   </Button>
@@ -188,11 +189,11 @@ export function EvaluationsPanel({
           </TooltipProvider>
         </div>
       </div>
-      
+
       <div className="mb-4 text-sm text-muted-foreground">
         Has creado {currentEvaluationCount} de {evaluationLimit} evaluaciones.
       </div>
-      
+
       {/* Modal de confirmación para eliminar evaluación */}
       <AlertDialog open={deleteId !== null} onOpenChange={cancelDelete}>
         <AlertDialogContent>
@@ -234,15 +235,15 @@ export function EvaluationsPanel({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-        <EvaluationForm
-          evaluation={editing || undefined}
-          onSave={handleSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            setEditing(null);
+          <EvaluationForm
+            evaluation={editing || undefined}
+            onSave={handleSubmit}
+            onCancel={() => {
+              setShowForm(false);
+              setEditing(null);
               setError(''); // Limpiar error al cancelar
-          }}
-        />
+            }}
+          />
         </div>
       ) : (
         <>

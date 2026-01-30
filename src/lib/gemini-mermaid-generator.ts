@@ -160,7 +160,7 @@ export async function optimizeMermaidCode(
       throw new Error('API Key de Gemini es requerida');
     }
     const genAI = new GoogleGenAI({ apiKey });
-    const model = "gemini-2.0-flash";
+    const model = "gemini-2.5-flash";
 
     const optimizationPrompt = `
 Eres un experto en diagramas Mermaid. Tu tarea es optimizar el código Mermaid existente según los objetivos de mejora especificados.

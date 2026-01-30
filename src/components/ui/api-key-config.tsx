@@ -7,13 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Key, Save, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
-import { 
-  getApiKeyFromStorage, 
-  setApiKeyInStorage, 
-  removeApiKeyFromStorage, 
-  validateApiKeyFormat,
-  useApiKeyStatus 
+import {
+  validateApiKeyFormat
 } from '@/lib/apiKeyService';
+import { saveGeminiApiKey, getGeminiApiKey } from '@/app/actions/api-key';
 
 interface ApiKeyConfigProps {
   title?: string;
@@ -22,7 +19,7 @@ interface ApiKeyConfigProps {
   onSaved?: () => void;
 }
 
-export function ApiKeyConfig({ 
+export function ApiKeyConfig({
   title = "Configuración de API Key de Gemini",
   description = "Configura tu API key personal de Google Gemini para usar las funciones de IA.",
   className = "",
@@ -32,14 +29,22 @@ export function ApiKeyConfig({
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
-  const apiKeyStatus = useApiKeyStatus();
+  const [hasStoredKey, setHasStoredKey] = useState(false);
 
   useEffect(() => {
-    // Cargar la API key existente al montar el componente
-    const existingKey = getApiKeyFromStorage();
-    if (existingKey) {
-      setApiKey(existingKey);
-    }
+    // Cargar la API key del servidor al montar
+    const loadKey = async () => {
+      try {
+        const key = await getGeminiApiKey();
+        if (key) {
+          setApiKey(key);
+          setHasStoredKey(true);
+        }
+      } catch (error) {
+        console.error("Error loading API key:", error);
+      }
+    };
+    loadKey();
   }, []);
 
   const handleSave = async () => {
@@ -53,19 +58,25 @@ export function ApiKeyConfig({
       }
 
       if (!validateApiKeyFormat(apiKey.trim())) {
-        setMessage({ 
-          type: 'error', 
-          text: 'El formato de la API key no es válido. Debe comenzar con "AIza" y tener más de 10 caracteres.' 
+        setMessage({
+          type: 'error',
+          text: 'El formato de la API key no es válido. Debe comenzar con "AIza" y tener más de 10 caracteres.'
         });
         return;
       }
 
-      setApiKeyInStorage(apiKey.trim());
-      setMessage({ type: 'success', text: 'API key guardada correctamente.' });
-      // Notificar al padre para cerrar el modal si se proporciona
-      try {
-        onSaved?.();
-      } catch {}
+      const result = await saveGeminiApiKey(apiKey.trim());
+
+      if (result.success) {
+        setHasStoredKey(true);
+        setMessage({ type: 'success', text: 'API key guardada correctamente en tu cuenta.' });
+        try {
+          onSaved?.();
+        } catch { }
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Error al guardar la API key.' });
+      }
+
     } catch (error) {
       console.error('Error saving API key:', error);
       setMessage({ type: 'error', text: 'Error al guardar la API key. Inténtalo de nuevo.' });
@@ -74,14 +85,24 @@ export function ApiKeyConfig({
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
+    // Para "eliminar" simplemente guardamos string vacío o podríamos implementar remove accion
+    // Por ahora, permitimos sobreescribir.
+    // Si queremos borrar, podemos guardar vacío.
+    setIsLoading(true);
     try {
-      removeApiKeyFromStorage();
-      setApiKey('');
-      setMessage({ type: 'info', text: 'API key eliminada correctamente.' });
+      const result = await saveGeminiApiKey('');
+      if (result.success) {
+        setApiKey('');
+        setHasStoredKey(false);
+        setMessage({ type: 'info', text: 'API key eliminada de tu cuenta.' });
+      } else {
+        setMessage({ type: 'error', text: 'Error al eliminar la API key.' });
+      }
     } catch (error) {
-      console.error('Error removing API key:', error);
-      setMessage({ type: 'error', text: 'Error al eliminar la API key.' });
+      setMessage({ type: 'error', text: 'Error al eliminar.' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -104,17 +125,17 @@ export function ApiKeyConfig({
       <CardContent className="space-y-4">
         {/* Estado actual de la API key */}
         <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-          {apiKeyStatus.hasKey ? (
+          {hasStoredKey ? (
             <>
               <CheckCircle className="h-4 w-4 text-green-500" />
               <span className="text-sm">
-                API key configurada {apiKeyStatus.isValid ? '(válida)' : '(formato inválido)'}
+                API key configurada y guardada en el servidor.
               </span>
             </>
           ) : (
             <>
               <AlertCircle className="h-4 w-4 text-orange-500" />
-              <span className="text-sm">No hay API key configurada</span>
+              <span className="text-sm">No hay API key configurada en tu cuenta.</span>
             </>
           )}
         </div>
@@ -147,9 +168,9 @@ export function ApiKeyConfig({
           </div>
           <p className="text-xs text-muted-foreground">
             Obtén tu API key en{' '}
-            <a 
-              href="https://makersuite.google.com/app/apikey" 
-              target="_blank" 
+            <a
+              href="https://makersuite.google.com/app/apikey"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
@@ -167,18 +188,18 @@ export function ApiKeyConfig({
 
         {/* Botones de acción */}
         <div className="flex gap-2">
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={isLoading || !apiKey.trim()}
             className="flex-1"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isLoading ? 'Guardando...' : 'Guardar'}
+            {isLoading ? 'Guardando...' : 'Guardar en Cuenta'}
           </Button>
-          
-          {apiKeyStatus.hasKey && (
-            <Button 
-              variant="outline" 
+
+          {hasStoredKey && (
+            <Button
+              variant="outline"
               onClick={handleRemove}
               disabled={isLoading}
             >
@@ -190,9 +211,9 @@ export function ApiKeyConfig({
 
         {/* Información adicional */}
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>• Tu API key se almacena localmente en tu navegador</p>
-          <p>• No se envía a nuestros servidores</p>
-          <p>• Necesitarás configurarla en cada dispositivo que uses</p>
+          <p>• Tu API key se almacena de forma segura en tu cuenta.</p>
+          <p>• Se utilizará para las evaluaciones que tú crees.</p>
+          <p>• Los estudiantes usarán tu llave automáticamente (sin verla).</p>
         </div>
       </CardContent>
     </Card>

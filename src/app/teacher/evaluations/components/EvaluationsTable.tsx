@@ -9,6 +9,7 @@ export interface Evaluation {
   helpUrl?: string;
   createdAt: string;
   updatedAt: string;
+  maxSupportAttempts?: number;
 }
 
 interface EvaluationsTableProps {

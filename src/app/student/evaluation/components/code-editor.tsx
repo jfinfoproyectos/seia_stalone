@@ -17,7 +17,7 @@ declare global {
 // Carga diferida del editor Monaco
 const MonacoEditor = dynamic(
   () => import('@monaco-editor/react').then((mod) => mod.default),
-  { 
+  {
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full w-full bg-black rounded-lg">
@@ -97,7 +97,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
           <div className="text-center p-4">
             <p className="text-red-600 dark:text-red-400 mb-2">Error al cargar el editor</p>
             <p className="text-sm text-red-500 dark:text-red-300">{editorError}</p>
-            <button 
+            <button
               onClick={() => {
                 setEditorError(null);
                 setIsEditorReady(false);
@@ -122,6 +122,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
           onChange={(value) => handleChange(value || '')}
           options={{
             ...getEditorOptions(window.innerWidth < 640),
+            contextmenu: false, // Deshabilitar menú contextual desde las props iniciales
           }}
           theme={currentTheme}
           defaultValue=""
@@ -134,10 +135,10 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
             try {
               // Definir temas personalizados primero
               defineCustomThemes(monaco);
-              
+
               // Aplicar el tema después de definir los temas personalizados
               monaco.editor.setTheme(currentTheme);
-              
+
               editorRef.current = editor;
               setIsEditorReady(true);
 
@@ -153,7 +154,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
               };
 
               // Configurar opciones del editor con restricciones de pegar
-              editor.updateOptions({ 
+              editor.updateOptions({
                 // Deshabilitar menú contextual completamente para evitar pegar
                 contextmenu: false,
                 // Habilitar selección múltiple
@@ -205,9 +206,9 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
 
                 const preventKeyboardPaste = (e: KeyboardEvent) => {
                   // Bloquear Ctrl+V, Ctrl+Shift+V, Shift+Insert
-                  if ((e.ctrlKey && e.key === 'v') || 
-                      (e.ctrlKey && e.shiftKey && e.key === 'V') ||
-                      (e.shiftKey && e.key === 'Insert')) {
+                  if ((e.ctrlKey && e.key === 'v') ||
+                    (e.ctrlKey && e.shiftKey && e.key === 'V') ||
+                    (e.shiftKey && e.key === 'Insert')) {
                     e.preventDefault();
                     e.stopPropagation();
                     console.warn('[CodeEditor] Atajo de teclado para pegar bloqueado');
@@ -234,7 +235,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
               editor.layout();
 
               window.addEventListener('resize', updateEditorOptions);
-              
+
               // Nota: onMount no gestiona ciclo de vida; cleanup se realiza al desmontar el componente React
             } catch (error) {
               console.error('[CodeEditor] Error en onMount:', error);
@@ -251,7 +252,7 @@ export const CodeEditor = ({ value, onChange, language, height = '100%' }: CodeE
             }
           }}
         />
-        
+
         {/* Indicación de ayuda para zoom */}
         {isEditorReady && (
           <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/60 select-none pointer-events-none bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-border/30">

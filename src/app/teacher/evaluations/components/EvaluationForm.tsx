@@ -10,6 +10,7 @@ export interface Evaluation {
   helpUrl?: string;
   createdAt?: string;
   updatedAt?: string;
+  maxSupportAttempts?: number;
 }
 
 interface EvaluationFormProps {
@@ -22,12 +23,13 @@ export function EvaluationForm({ evaluation, onSave, onCancel }: EvaluationFormP
   const [title, setTitle] = useState(evaluation?.title || '');
   const [description, setDescription] = useState(evaluation?.description || '');
   const [helpUrl, setHelpUrl] = useState(evaluation?.helpUrl || '');
+  const [maxSupportAttempts, setMaxSupportAttempts] = useState(evaluation?.maxSupportAttempts ?? 3);
 
   return (
     <form
       onSubmit={e => {
         e.preventDefault();
-        onSave({ ...evaluation, title, description, helpUrl });
+        onSave({ ...evaluation, title, description, helpUrl, maxSupportAttempts });
       }}
       className="space-y-4"
     >
@@ -42,6 +44,27 @@ export function EvaluationForm({ evaluation, onSave, onCancel }: EvaluationFormP
       <div>
         <label className="block mb-1 font-medium">URL de ayuda</label>
         <Input value={helpUrl} onChange={e => setHelpUrl(e.target.value)} />
+      </div>
+      <div>
+        <label className="block mb-1 font-medium">
+          Intentos máximos de ayuda por IA (por pregunta)
+          <span className="text-xs text-muted-foreground ml-2">(Máximo 10)</span>
+        </label>
+        <Input
+          type="number"
+          min="0"
+          max="10"
+          value={maxSupportAttempts}
+          onChange={e => {
+            const val = parseInt(e.target.value);
+            if (!isNaN(val) && val >= 0 && val <= 10) {
+              setMaxSupportAttempts(val);
+            }
+          }}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Define cuántas veces un estudiante puede solicitar evaluación/ayuda a la IA para una misma pregunta.
+        </p>
       </div>
       <div className="flex gap-2">
         <Button type="submit">Guardar</Button>

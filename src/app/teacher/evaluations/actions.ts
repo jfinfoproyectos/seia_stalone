@@ -7,10 +7,10 @@ import { prisma } from '@/lib/prisma';
 async function getUserFromSession() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Usuario no autenticado");
-  
+
   const user = await prisma.user.findUnique({ where: { id: parseInt(session.user.id) } });
   if (!user) throw new Error("Usuario no encontrado en la base de datos");
-  
+
   return user;
 }
 
@@ -39,7 +39,7 @@ export async function getEvaluaciones() {
   });
 }
 
-export async function createEvaluacion(data: { title: string; description?: string; helpUrl?: string }) {
+export async function createEvaluacion(data: { title: string; description?: string; helpUrl?: string; maxSupportAttempts?: number }) {
   const user = await getUserFromSession();
 
   const evaluationCount = await prisma.evaluation.count({
@@ -49,7 +49,7 @@ export async function createEvaluacion(data: { title: string; description?: stri
   if (evaluationCount >= user.evaluationLimit) {
     throw new Error("Has alcanzado tu límite de evaluaciones. Contacta a un administrador para aumentarlo.");
   }
-  
+
   return await prisma.evaluation.create({
     data: {
       ...data,
@@ -58,7 +58,7 @@ export async function createEvaluacion(data: { title: string; description?: stri
   });
 }
 
-export async function updateEvaluacion(id: number, data: { title?: string; description?: string; helpUrl?: string }) {
+export async function updateEvaluacion(id: number, data: { title?: string; description?: string; helpUrl?: string; maxSupportAttempts?: number }) {
   const user = await getUserFromSession();
   const evaluation = await prisma.evaluation.findUnique({
     where: { id },
@@ -122,7 +122,7 @@ export async function importEvaluacion(data: {
   if (evaluationCount >= user.evaluationLimit) {
     throw new Error("Has alcanzado tu límite de evaluaciones. Contacta a un administrador para aumentarlo.");
   }
-  
+
   return await prisma.evaluation.create({
     data: {
       title: data.title,

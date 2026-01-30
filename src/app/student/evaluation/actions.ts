@@ -6,6 +6,8 @@ import { nowUTC, isBeforeUTC, isAfterUTC } from '@/lib/date-utils';
 import { prisma } from '@/lib/prisma';
 import { LiveMessageBus, LiveMessage } from '@/lib/live-message-bus';
 import { isUserBlocked } from '@/lib/live-user-blocks';
+import { evaluateStudentCode } from '@/lib/gemini-code-evaluation';
+import { evaluateTextResponse } from '@/lib/gemini-text-evaluation';
 
 // Tipo para las respuestas del estudiante
 type StudentAnswer = {
@@ -55,8 +57,8 @@ export async function getAttemptByUniqueCode(uniqueCode: string, email?: string)
 
     // Verificar si ya existe una presentación enviada para este estudiante específico
     if (email && attempt.submissions && attempt.submissions.length > 0) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Esta evaluación ya fue enviada anteriormente. No es posible presentarla nuevamente.',
         alreadySubmitted: true
       };
@@ -74,8 +76,8 @@ export async function getAttemptByUniqueCode(uniqueCode: string, email?: string)
 
     // Asegurarse de que todos los campos necesarios estén incluidos en la respuesta
     // Especialmente el campo helpUrl que es requerido por el componente
-    return { 
-      success: true, 
+    return {
+      success: true,
       attempt,
       evaluation: {
         ...attempt.evaluation,
@@ -103,7 +105,7 @@ export async function createSubmission(attemptId: number, email: string, firstNa
         createdAt: 'desc'
       }
     });
-    
+
     if (existingSubmission) {
       // Si ya existe una submission para este email, devolverla
       if (existingSubmission.submittedAt !== null) {
@@ -144,7 +146,7 @@ export async function saveAnswer(submissionId: number, questionId: number, answe
     // Preparar operaciones a realizar
     const operations = [];
     let answer;
-    
+
     // Operación 1: Guardar/actualizar la respuesta si hay una calificación
     if (score !== undefined) {
       // Primero buscamos si existe la respuesta
@@ -155,7 +157,7 @@ export async function saveAnswer(submissionId: number, questionId: number, answe
         },
         select: { id: true }
       });
-      
+
       operations.push(
         existingAnswerPromise.then(async (existingAnswer) => {
           if (existingAnswer) {
@@ -182,21 +184,21 @@ export async function saveAnswer(submissionId: number, questionId: number, answe
         })
       );
     }
-    
+
 
 
     // Ejecutar todas las operaciones en paralelo
     if (operations.length > 0) {
       await Promise.all(operations);
     }
-    
+
     // Calcular y actualizar el promedio de calificaciones si se proporcionó una calificación
     if (score !== undefined) {
       await updateSubmissionScore(submissionId);
     }
 
     return { success: true, answer };
-  
+
   } catch (error) {
     console.error('Error al guardar la respuesta:', error);
     return { success: false, error: 'Error al guardar la respuesta' };
@@ -253,7 +255,7 @@ export async function updateSubmissionScore(submissionId: number) {
 
     // Obtener todas las preguntas de la evaluación
     const questions = submission.attempt.evaluation.questions;
-    
+
     // Obtener todas las respuestas existentes para esta presentación
     const existingAnswers = await prisma.answer.findMany({
       where: { submissionId },
@@ -273,7 +275,7 @@ export async function updateSubmissionScore(submissionId: number) {
     // Identificar preguntas sin respuesta o con respuestas sin calificación
     for (const question of questions) {
       const existingAnswer = answerMap.get(question.id);
-      
+
       if (!existingAnswer) {
         // Si no existe respuesta, añadir a la lista para crear en lote
         answersToCreate.push({
@@ -294,14 +296,14 @@ export async function updateSubmissionScore(submissionId: number) {
     // Ejecutar operaciones en paralelo
     await Promise.all([
       // Crear respuestas faltantes en lote (si hay alguna)
-      answersToCreate.length > 0 ? 
+      answersToCreate.length > 0 ?
         prisma.answer.createMany({
           data: answersToCreate,
           skipDuplicates: true
         }) : Promise.resolve(),
-      
+
       // Actualizar respuestas sin calificación en paralelo
-      ...answersToUpdate.map(answer => 
+      ...answersToUpdate.map(answer =>
         prisma.answer.update({
           where: { id: answer.id },
           data: { score: answer.score }
@@ -315,7 +317,7 @@ export async function updateSubmissionScore(submissionId: number) {
       _avg: { score: true },
       _count: { score: true }
     });
-    
+
     // Obtener el promedio calculado
     const averageScore = aggregateResult._avg.score || 0;
 
@@ -363,11 +365,11 @@ export async function saveAnswers(submissionId: number, answers: StudentAnswer[]
     // Separar respuestas en nuevas y existentes
     const newAnswers = [];
     const updateOperations = [];
-    
+
     // Clasificar las respuestas
     for (const answer of answers) {
       const existingAnswer = existingAnswersMap.get(answer.questionId);
-      
+
       if (existingAnswer) {
         // Si la respuesta ya existe, actualizarla
         updateOperations.push(
@@ -393,12 +395,12 @@ export async function saveAnswers(submissionId: number, answers: StudentAnswer[]
     // Ejecutar operaciones en paralelo
     await Promise.all([
       // Crear nuevas respuestas en lote si hay alguna
-      newAnswers.length > 0 ? 
+      newAnswers.length > 0 ?
         prisma.answer.createMany({
           data: newAnswers,
           skipDuplicates: true
         }) : Promise.resolve(),
-      
+
       // Ejecutar todas las actualizaciones en paralelo
       ...updateOperations
     ]);
@@ -457,25 +459,25 @@ export async function submitEvaluation(submissionId: number) {
 
     // Asegurar que el promedio de calificaciones esté actualizado
     const scoreResult = await updateSubmissionScore(submissionId);
-    
+
     // Obtener todas las respuestas con sus preguntas para generar el reporte
     const answersResult = await getAnswersBySubmissionId(submissionId);
-    
+
     if (!answersResult.success || !scoreResult.success) {
       throw new Error('Error al obtener los datos para el reporte');
     }
-    
+
     // Actualizar la presentación con la fecha de envío usando una transacción para evitar condiciones de carrera
     const submission = await prisma.$transaction(async (tx) => {
       // Verificar nuevamente si la presentación ya fue enviada (dentro de la transacción)
       const currentSubmission = await tx.submission.findUnique({
         where: { id: submissionId }
       });
-      
+
       if (currentSubmission && currentSubmission.submittedAt !== null) {
         return currentSubmission; // Ya fue enviada, devolver sin modificar
       }
-      
+
       // Si no ha sido enviada, actualizarla
       return await tx.submission.update({
         where: { id: submissionId },
@@ -484,17 +486,17 @@ export async function submitEvaluation(submissionId: number) {
         }
       });
     });
-    
+
     revalidatePath('/student');
-    return { 
-      success: true, 
+    return {
+      success: true,
       submission
     };
   } catch (error) {
     console.error('Error al enviar la evaluación:', error);
     // Improve error serialization
-    const errorMessage = error instanceof Error 
-      ? error.message 
+    const errorMessage = error instanceof Error
+      ? error.message
       : 'Error desconocido al enviar la evaluación';
     return { success: false, error: errorMessage };
   }

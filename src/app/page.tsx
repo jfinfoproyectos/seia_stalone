@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-import {  Book, PenTool, LineChart, Clock, ArrowRight, Shield,  Code, CheckCircle } from "lucide-react";
+import { Book, PenTool, LineChart, Clock, ArrowRight, Shield, Code, CheckCircle } from "lucide-react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { CardStack } from "@/components/ui/card-stack";
 
@@ -105,12 +105,6 @@ export default function Home() {
                 <a href="/student" className="flex items-center gap-2">
                   Acceso para Estudiantes
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
-              </Button>
-              <Button size="lg" className="rounded-full px-8 blur-effect group" asChild>
-                <a href="/playground" className="flex items-center gap-2">
-                  Playground de Práctica
-                  <Code className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
               </Button>
             </div>
